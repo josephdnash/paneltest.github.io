@@ -6,17 +6,16 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>MSFS Touch Deck</title>
+    <title>MSFS Panel Builder</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
     <style>
         :root {
             --bg-base: #09090b; --bg-panel: #18181b; --border-panel: #27272a;
             --text-main: #f4f4f5; --text-muted: #a1a1aa;
             --accent-blue: #0ea5e9; --accent-green: #10b981;
-            --accent-red: #ef4444; --accent-yellow: #f59e0b; --accent-purple: #8b5cf6;
+            --accent-red: #ef4444; --accent-yellow: #f59e0b;
         }
 
         body {
@@ -28,358 +27,237 @@
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border-panel); }
         .header h1 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px; color: var(--text-muted); }
 
-        .status-badge { display: flex; align-items: center; gap: 8px; background: rgba(0, 0, 0, 0.5); padding: 8px 16px; border-radius: 99px; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; border: 1px solid var(--border-panel); }
-        .status-indicator { width: 10px; height: 10px; border-radius: 50%; background-color: var(--accent-yellow); box-shadow: 0 0 10px var(--accent-yellow); }
+        .controls-row { display: flex; gap: 12px; align-items: center; }
+        
+        .mode-toggle {
+            background: #27272a; color: white; border: none; padding: 8px 16px; border-radius: 8px;
+            font-weight: bold; cursor: pointer; transition: background 0.2s;
+        }
+        .mode-toggle.edit-active { background: var(--accent-blue); }
+
+        .status-indicator { width: 10px; height: 10px; border-radius: 50%; background-color: var(--accent-yellow); box-shadow: 0 0 10px var(--accent-yellow); display: inline-block; margin-right: 8px;}
         .status-indicator.connected { background-color: var(--accent-green); box-shadow: 0 0 10px var(--accent-green); }
         .status-indicator.disconnected { background-color: var(--accent-red); box-shadow: 0 0 10px var(--accent-red); }
 
-        .telemetry-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
-        .instrument { background: var(--bg-panel); border: 1px solid var(--border-panel); border-radius: 20px; padding: 24px; display: flex; flex-direction: column; align-items: center; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.2); }
-        .instrument-label { font-size: 14px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; }
-        .instrument-value { font-family: 'Roboto Mono', monospace; font-size: 48px; font-weight: 700; color: var(--accent-blue); text-shadow: 0 0 20px rgba(14, 165, 233, 0.4); line-height: 1; margin-bottom: 8px; font-variant-numeric: tabular-nums; }
-        .instrument-unit { font-size: 14px; font-weight: 600; color: #52525b; }
-
-        .upload-container { width: 100%; display: flex; justify-content: center; margin-bottom: 24px; position: relative; }
-        .btn-upload { background: rgba(139, 92, 246, 0.1); color: var(--accent-purple); border: 1px dashed var(--accent-purple); padding: 16px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; width: 100%; cursor: pointer; border-radius: 12px; transition: background 0.2s; font-weight: bold; text-align: center; box-sizing: border-box; display: block;}
-        .btn-upload:hover { background: rgba(139, 92, 246, 0.2); }
-
-        /* SAFARI FIX: Visually hide the input without completely removing it from the DOM */
-        .visually-hidden {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            border: 0;
+        /* THE GRID */
+        #builder-grid {
+            display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(3, 1fr);
+            gap: 12px; flex-grow: 1; background: #000; padding: 16px; border-radius: 16px; 
+            border: 2px solid var(--border-panel); box-shadow: inset 0 4px 20px rgba(0,0,0,0.8);
         }
 
-        #deck-controls { display: none; width: 100%; margin-bottom: 16px; }
-        .page-select {
-            background: rgba(0,0,0,0.5); color: var(--accent-blue); border: 1px solid var(--border-panel);
-            padding: 12px 16px; border-radius: 12px; font-size: 14px; font-family: 'Inter', sans-serif; font-weight: bold;
-            outline: none; cursor: pointer; width: 100%; text-align: center; appearance: auto;
-        }
-        .page-select:focus { border-color: var(--accent-blue); }
-
-        #dynamic-deck {
-            display: grid; gap: 12px; flex-grow: 1; width: 100%; background: #000; padding: 16px; border-radius: 16px; border: 2px solid var(--border-panel); box-shadow: inset 0 4px 20px rgba(0,0,0,0.8);
+        .grid-cell {
+            background-color: #111; border-radius: 12px; display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; transition: all 0.1s; position: relative;
         }
 
-        .sd-btn {
-            background-color: #111; border: 1px solid #333; border-radius: 12px; color: white; font-size: 12px; font-weight: bold;
-            display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 8px;
-            cursor: pointer; background-size: cover; background-position: center; background-repeat: no-repeat;
-            transition: transform 0.05s, box-shadow 0.05s; box-shadow: 0 4px 8px rgba(0,0,0,0.5); text-shadow: 1px 1px 3px rgba(0,0,0,0.9);
-            text-align: center; min-height: 80px; position: relative;
-        }
+        /* Edit Mode Styles */
+        body.edit-mode .grid-cell { border: 2px dashed #333; cursor: pointer; }
+        body.edit-mode .grid-cell:hover { border-color: var(--accent-blue); background-color: #1a1a2e; }
+        body.edit-mode .grid-cell.filled { border: 2px solid var(--accent-blue); }
+        
+        /* Fly Mode Styles */
+        body.fly-mode .grid-cell { border: 1px solid #333; box-shadow: 0 4px 8px rgba(0,0,0,0.5); }
+        body.fly-mode .grid-cell.empty { opacity: 0; pointer-events: none; }
+        body.fly-mode .grid-cell.filled:active { transform: scale(0.92); box-shadow: 0 0 2px rgba(0,0,0,0.8); border-color: var(--accent-blue); }
 
-        .sd-btn:active { transform: scale(0.92); box-shadow: 0 0 2px rgba(0,0,0,0.8); border-color: var(--accent-blue); }
-        .nav-icon { font-size: 24px; margin-bottom: 4px; }
+        .cell-icon { font-size: 32px; margin-bottom: 8px; }
+        .cell-title { font-size: 12px; font-weight: bold; text-align: center; padding: 0 4px;}
+        .delete-btn { 
+            position: absolute; top: -8px; right: -8px; background: var(--accent-red); color: white;
+            border-radius: 50%; width: 24px; height: 24px; display: none; align-items: center; 
+            justify-content: center; font-size: 12px; font-weight: bold; border: 2px solid #000;
+        }
+        body.edit-mode .grid-cell.filled .delete-btn { display: flex; }
+
+        /* THE COMPONENT MODAL */
+        #component-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); align-items: center; justify-content: center; z-index: 100;
+        }
+        .modal-content {
+            background: var(--bg-panel); padding: 24px; border-radius: 16px; width: 90%; max-width: 400px;
+            border: 1px solid var(--border-panel);
+        }
+        .modal-title { margin-top: 0; font-size: 18px; color: var(--text-main); margin-bottom: 16px; }
+        .component-list { display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto; }
+        .component-item {
+            background: #27272a; padding: 12px; border-radius: 8px; cursor: pointer;
+            display: flex; align-items: center; gap: 12px; color: white; font-weight: bold; border: 1px solid transparent;
+        }
+        .component-item:active { border-color: var(--accent-blue); }
+        .cancel-btn { margin-top: 16px; width: 100%; padding: 12px; background: transparent; color: var(--text-muted); border: 1px solid #333; border-radius: 8px; cursor: pointer;}
     </style>
 </head>
-<body>
+<body class="edit-mode">
 
     <div class="header">
-        <h1>MSFS DECK</h1>
-        <div class="status-badge">
-            <div id="status-dot" class="status-indicator"></div>
-            <span id="connection-status-text">CONNECTING</span>
+        <div>
+            <h1>PANEL BUILDER</h1>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                <div id="status-dot" class="status-indicator"></div>
+                <span id="connection-status-text">CONNECTING</span>
+            </div>
+        </div>
+        <div class="controls-row">
+            <button id="btn-mode" class="mode-toggle edit-active" onclick="toggleMode()">✏️ EDIT MODE</button>
         </div>
     </div>
 
-    <div class="upload-container">
-        <input type="file" id="profile-upload" accept=".streamDeckProfile,.zip" class="visually-hidden">
-        <label for="profile-upload" class="btn-upload">
-            📥 Import Custom Profile
-        </label>
-    </div>
+    <div id="builder-grid"></div>
 
-    <div class="telemetry-grid">
-        <div class="instrument">
-            <div class="instrument-label">Airspeed</div>
-            <div class="instrument-value" id="val-airspeed">---</div>
-            <div class="instrument-unit">KNOTS</div>
-        </div>
-        <div class="instrument">
-            <div class="instrument-label">Altitude</div>
-            <div class="instrument-value" id="val-altitude">---</div>
-            <div class="instrument-unit">FEET</div>
-        </div>
-    </div>
-
-    <div id="deck-controls">
-        <select id="page-selector" class="page-select"></select>
-    </div>
-
-    <div id="dynamic-deck">
-        <div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 40px;">
-            Awaiting Profile Upload...
+    <div id="component-modal">
+        <div class="modal-content">
+            <h2 class="modal-title">Assign Control</h2>
+            <div class="component-list" id="component-list"></div>
+            <button class="cancel-btn" onclick="closeModal()">Cancel</button>
         </div>
     </div>
 
     <script>
+        // --- 1. OUR STANDARDIZED DICTIONARY ---
+        // You control this completely. No more guessing community formatting.
+        const DICTIONARY = {
+            "parking_brake": { name: "Parking Brake", icon: "🛑", command: "PARKING_BRAKES" },
+            "gear_toggle": { name: "Landing Gear", icon: "⚙️", command: "GEAR_TOGGLE" },
+            "flaps_up": { name: "Flaps Up", icon: "🔼", command: "FLAPS_DECR" },
+            "flaps_down": { name: "Flaps Down", icon: "🔽", command: "FLAPS_INCR" },
+            "lights_nav": { name: "Nav Lights", icon: "💡", command: "TOGGLE_NAV_LIGHTS" },
+            "ap_master": { name: "Autopilot", icon: "✈️", command: "AUTOPILOT_ON" }
+        };
+
+        // --- 2. ENGINE STATE ---
+        let isEditMode = true;
+        let selectedCellIndex = null;
+        
+        // Load saved layout from local storage, or create a blank 15-cell array
+        let gridState = JSON.parse(localStorage.getItem('msfs_diy_panel')) || new Array(15).fill(null);
+
+        // --- 3. UI RENDERING ---
+        function renderGrid() {
+            const grid = document.getElementById('builder-grid');
+            grid.innerHTML = '';
+
+            gridState.forEach((cellData, index) => {
+                const cell = document.createElement('div');
+                cell.className = 'grid-cell ' + (cellData ? 'filled' : 'empty');
+                
+                if (cellData) {
+                    // Cell has a button assigned
+                    const dictItem = DICTIONARY[cellData.id];
+                    cell.innerHTML = `
+                        <div class="cell-icon">${dictItem.icon}</div>
+                        <div class="cell-title">${dictItem.name}</div>
+                        <div class="delete-btn" onclick="clearCell(event, ${index})">✕</div>
+                    `;
+                    
+                    // If in Fly Mode, wire up the MSFS command!
+                    if (!isEditMode) {
+                        cell.onclick = () => sendCommand(dictItem.command);
+                    }
+                } else {
+                    // Cell is empty
+                    if (isEditMode) {
+                        cell.innerHTML = `<div style="color: #333; font-size: 24px;">+</div>`;
+                        cell.onclick = () => openModal(index);
+                    }
+                }
+                
+                grid.appendChild(cell);
+            });
+        }
+
+        function toggleMode() {
+            isEditMode = !isEditMode;
+            document.body.className = isEditMode ? 'edit-mode' : 'fly-mode';
+            
+            const btn = document.getElementById('btn-mode');
+            if (isEditMode) {
+                btn.innerHTML = "✏️ EDIT MODE";
+                btn.classList.add('edit-active');
+            } else {
+                btn.innerHTML = "🚀 FLY MODE";
+                btn.classList.remove('edit-active');
+            }
+            renderGrid();
+        }
+
+        // --- 4. THE MODAL BUILDER ---
+        function openModal(index) {
+            selectedCellIndex = index;
+            const list = document.getElementById('component-list');
+            list.innerHTML = '';
+
+            for (const [id, data] of Object.entries(DICTIONARY)) {
+                const item = document.createElement('div');
+                item.className = 'component-item';
+                item.innerHTML = `<span style="font-size: 20px;">${data.icon}</span> <span>${data.name}</span>`;
+                item.onclick = () => assignCell(id);
+                list.appendChild(item);
+            }
+            document.getElementById('component-modal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('component-modal').style.display = 'none';
+            selectedCellIndex = null;
+        }
+
+        function assignCell(componentId) {
+            if (selectedCellIndex !== null) {
+                gridState[selectedCellIndex] = { id: componentId };
+                saveLayout();
+                renderGrid();
+                closeModal();
+            }
+        }
+
+        function clearCell(event, index) {
+            event.stopPropagation(); // Stop the cell click event from firing
+            gridState[index] = null;
+            saveLayout();
+            renderGrid();
+        }
+
+        function saveLayout() {
+            localStorage.setItem('msfs_diy_panel', JSON.stringify(gridState));
+        }
+
+        // --- 5. NETWORK PIPELINE ---
         const statusText = document.getElementById('connection-status-text');
         const statusDot = document.getElementById('status-dot');
-        const altDiv = document.getElementById('val-altitude');
-        const spdDiv = document.getElementById('val-airspeed');
         let ws;
 
-        let profilesDB = {};         
-        let profileHistory = [];     
-        let currentProfileUUID = null;
-        let globalMaxCol = 4;        
-        let globalMaxRow = 2;
-
-        function updateStatus(state, customText = null) {
+        function updateStatus(state) {
             statusDot.className = 'status-indicator'; 
             if (state === 'connected') {
-                statusText.innerText = customText || 'DATA LINK ESTABLISHED';
+                statusText.innerText = 'DATA LINK ESTABLISHED';
                 statusDot.classList.add('connected');
-            } else if (state === 'disconnected') {
-                statusText.innerText = customText || 'DATA LINK LOST';
-                statusDot.classList.add('disconnected');
             } else {
-                statusText.innerText = customText || 'CONNECTING...';
+                statusText.innerText = 'DATA LINK LOST';
+                statusDot.classList.add('disconnected');
             }
         }
 
         function connect() {
-            updateStatus('connecting');
             ws = new WebSocket('wss://msfs-relay.onrender.com');
             ws.onopen = () => updateStatus('connected');
-            ws.onmessage = (event) => {
-                try {
-                    const data = JSON.parse(event.data);
-                    if (data.altitude !== undefined) altDiv.innerText = Math.round(data.altitude).toString().padStart(4, '0');
-                    if (data.airspeed !== undefined) spdDiv.innerText = Math.round(data.airspeed).toString().padStart(3, '0');
-                } catch (e) {}
-            };
             ws.onclose = () => {
                 updateStatus('disconnected');
-                altDiv.innerText = '---'; spdDiv.innerText = '---';
                 setTimeout(connect, 3000);
             };
         }
 
-        document.getElementById('page-selector').addEventListener('change', function(e) {
-            profileHistory.push(currentProfileUUID);
-            renderVirtualDeck(e.target.value);
-        });
-
-        function renderVirtualDeck(profileId) {
-            const actionsObj = profilesDB[profileId];
-            if (!actionsObj) return;
-
-            currentProfileUUID = profileId;
-            const deckContainer = document.getElementById('dynamic-deck');
-            deckContainer.innerHTML = ''; 
-
-            const sel = document.getElementById('page-selector');
-            if (sel) sel.value = profileId;
-
-            deckContainer.style.gridTemplateColumns = `repeat(${globalMaxCol + 1}, 1fr)`;
-            deckContainer.style.gridTemplateRows = `repeat(${globalMaxRow + 1}, 1fr)`;
-
-            for (let coordKey in actionsObj) {
-                let actionData = actionsObj[coordKey];
-                let parts = coordKey.split(',');
-                let col = parseInt(parts[0]);
-                let row = parseInt(parts[1]);
-
-                let btn = document.createElement('button');
-                btn.className = 'sd-btn';
-                btn.style.gridColumn = col + 1;
-                btn.style.gridRow = row + 1;
-
-                let imgBase64 = null;
-                if (actionData.Settings && actionData.Settings.ImageOff_base64) imgBase64 = actionData.Settings.ImageOff_base64;
-                else if (actionData.Settings && actionData.Settings.ImageOn_base64) imgBase64 = actionData.Settings.ImageOn_base64;
-                
-                if (imgBase64) {
-                    btn.style.backgroundImage = `url('data:image/png;base64,${imgBase64}')`;
-                }
-
-                if (actionData.States && actionData.States.length > 0 && actionData.States[0].Title) {
-                    let titleSpan = document.createElement('span');
-                    titleSpan.innerHTML = actionData.States[0].Title.replace(/\\n/g, '<br>');
-                    if (actionData.States[0].TitleColor) titleSpan.style.color = actionData.States[0].TitleColor;
-                    btn.appendChild(titleSpan);
-                }
-
-                let actionUUID = actionData.UUID;
-
-                if (actionUUID === "com.elgato.streamdeck.profile.openchild" || actionUUID === "com.elgato.streamdeck.profile.switchprofile") {
-                    if (!imgBase64) btn.innerHTML = `<span class="nav-icon">📁</span>` + btn.innerHTML;
-                    
-                    let childId = null;
-                    if (actionData.Settings && actionData.Settings.ProfileUUID) childId = actionData.Settings.ProfileUUID;
-                    else if (actionData.Settings && actionData.Settings.profileid) childId = actionData.Settings.profileid;
-                    else if (actionData.ProfileUUID) childId = actionData.ProfileUUID;
-
-                    let targetKey = null;
-                    if (childId) {
-                        let safeChildId = String(childId).toLowerCase();
-                        targetKey = Object.keys(profilesDB).find(k => k.toLowerCase().includes(safeChildId) || safeChildId.includes(k.toLowerCase()));
-                    }
-
-                    if (targetKey) {
-                        btn.onclick = () => {
-                            profileHistory.push(currentProfileUUID);
-                            renderVirtualDeck(targetKey);
-                        };
-                    } else {
-                        btn.style.opacity = "0.5";
-                        btn.style.border = "2px dashed red";
-                        btn.onclick = () => {
-                            console.error(">>> BROKEN FOLDER LINK <<<", actionData);
-                            alert("Broken Folder Link! Use the blue dropdown menu above to manually jump to the folder.");
-                        };
-                    }
-                } 
-                else if (actionUUID === "com.elgato.streamdeck.profile.backtoparent") {
-                    if (!imgBase64) btn.innerHTML = `<span class="nav-icon">🔙</span>` + btn.innerHTML;
-                    
-                    btn.onclick = () => {
-                        if (profileHistory.length > 0) {
-                            let parentId = profileHistory.pop();
-                            renderVirtualDeck(parentId);
-                        } else {
-                            alert("You are already at the Root profile!");
-                        }
-                    };
-                } 
-                else {
-                    let msfsCommand = actionData.Settings && actionData.Settings.ToggleValue ? actionData.Settings.ToggleValue : null;
-                    if (msfsCommand) {
-                        btn.onclick = () => {
-                            if (ws && ws.readyState === WebSocket.OPEN) {
-                                ws.send(JSON.stringify({ type: "SD_COMMAND", command: msfsCommand }));
-                            }
-                        };
-                    }
-                }
-
-                deckContainer.appendChild(btn);
+        function sendCommand(cmd) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                // We format it as a standard K-Event for our MSFS Swiss Army Knife to catch
+                ws.send(JSON.stringify({ type: "SD_COMMAND", command: cmd }));
             }
         }
 
-        // --- THE DEEP UNZIPPER ---
-        const uploadInput = document.getElementById('profile-upload');
-        
-        // SAFARI FIX: Clear the input on click gently via JS so we don't break the native file picker
-        uploadInput.addEventListener('click', function(e) {
-            e.target.value = '';
-        });
-
-        uploadInput.addEventListener('change', async function(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            console.log(`>>> FILE PICKED: ${file.name}`);
-            updateStatus('connecting', 'ANALYZING ARCHIVE...');
-            
-            // Force UI update before heavy JSZip math blocks the main thread
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            profilesDB = {};
-            profileHistory = [];
-            currentProfileUUID = null;
-            let pageScores = {}; 
-
-            try {
-                let zip = await JSZip.loadAsync(file);
-
-                const nestedProfiles = zip.file(/\.streamDeckProfile$/i);
-                if (nestedProfiles.length > 0) {
-                    const innerArchive = await nestedProfiles[0].async("blob");
-                    zip = await JSZip.loadAsync(innerArchive);
-                }
-
-                const manifestFiles = zip.file(/manifest\.json$/i).filter(f => !f.name.includes('__MACOSX'));
-                if (manifestFiles.length === 0) throw new Error("No manifest found.");
-
-                globalMaxCol = 4;
-                globalMaxRow = 2;
-
-                for (let i = 0; i < manifestFiles.length; i++) {
-                    let fileName = manifestFiles[i].name;
-                    
-                    try {
-                        let content = await manifestFiles[i].async("string");
-                        content = content.replace(/^\uFEFF/, ''); 
-                        let data = JSON.parse(content);
-                        
-                        if (data.Actions) {
-                            let match = fileName.match(/([^\/]+)\.sdProfile\/manifest\.json$/i);
-                            let pId = match ? match[1] : `page_fallback_${i}`;
-
-                            profilesDB[pId] = data.Actions;
-                            
-                            let score = Object.keys(data.Actions).length;
-                            let hasBackButton = false;
-                            for (let k in data.Actions) {
-                                if (data.Actions[k].UUID === "com.elgato.streamdeck.profile.backtoparent") {
-                                    hasBackButton = true;
-                                    break;
-                                }
-                            }
-                            
-                            score += hasBackButton ? -500 : 500;
-                            pageScores[pId] = score;
-
-                            for (let coordKey in data.Actions) {
-                                let parts = coordKey.split(',');
-                                let col = parseInt(parts[0]);
-                                let row = parseInt(parts[1]);
-                                if (col > globalMaxCol) globalMaxCol = col;
-                                if (row > globalMaxRow) globalMaxRow = row;
-                            }
-                        }
-                    } catch (err) {}
-                }
-
-                const pageSelector = document.getElementById('page-selector');
-                if (pageSelector) {
-                    pageSelector.innerHTML = '';
-                    for (let pId in profilesDB) {
-                        let opt = document.createElement('option');
-                        opt.value = pId;
-                        let btnCount = Object.keys(profilesDB[pId]).length;
-                        opt.innerText = `📂 PAGE: ${pId} (${btnCount} buttons)`;
-                        pageSelector.appendChild(opt);
-                    }
-                    document.getElementById('deck-controls').style.display = 'block';
-                }
-
-                let rootProfileId = null;
-                let highestScore = -9999;
-                
-                for (let pId in pageScores) {
-                    if (pageScores[pId] > highestScore) {
-                        highestScore = pageScores[pId];
-                        rootProfileId = pId;
-                    }
-                }
-
-                if (rootProfileId && profilesDB[rootProfileId]) {
-                    updateStatus('connected', `PROFILE LOADED!`);
-                    renderVirtualDeck(rootProfileId);
-                } else {
-                    throw new Error("No actions extracted from profile.");
-                }
-
-                setTimeout(() => updateStatus(ws && ws.readyState === 1 ? 'connected' : 'disconnected'), 3500);
-
-            } catch (error) {
-                console.error(">>> UNZIP ERROR: ", error);
-                updateStatus('disconnected', 'UPLOAD FAILED (CHECK CONSOLE)');
-            }
-            
-        });
-
+        // Boot up
         connect();
+        renderGrid();
     </script>
 </body>
 </html>

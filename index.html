@@ -59,14 +59,25 @@
         /* Fly Mode Styles */
         body.fly-mode .grid-cell { border: 1px solid #333; box-shadow: 0 4px 8px rgba(0,0,0,0.5); }
         body.fly-mode .grid-cell.empty { opacity: 0; pointer-events: none; }
-        body.fly-mode .grid-cell.filled:active { transform: scale(0.92); box-shadow: 0 0 2px rgba(0,0,0,0.8); border-color: var(--accent-blue); }
+        
+        /* Button specific Fly Mode */
+        body.fly-mode .grid-cell.type-button:active { transform: scale(0.92); box-shadow: 0 0 2px rgba(0,0,0,0.8); border-color: var(--accent-blue); }
+        
+        /* Gauge specific Fly Mode */
+        body.fly-mode .grid-cell.type-gauge { background-color: var(--bg-panel); border-top: 4px solid var(--accent-blue); }
 
         .cell-icon { font-size: 32px; margin-bottom: 8px; }
-        .cell-title { font-size: 12px; font-weight: bold; text-align: center; padding: 0 4px;}
+        .cell-title { font-size: 12px; font-weight: bold; text-align: center; padding: 0 4px; color: var(--text-muted); text-transform: uppercase;}
+        
+        /* The dynamic number readout for gauges */
+        .cell-value { font-family: 'Roboto Mono', monospace; font-size: 28px; font-weight: 700; color: var(--text-main); margin-top: 4px; display: none;}
+        body.fly-mode .grid-cell.type-gauge .cell-value { display: block; }
+        body.fly-mode .grid-cell.type-gauge .cell-icon { display: none; } /* Hide icon to make room for numbers */
+
         .delete-btn { 
             position: absolute; top: -8px; right: -8px; background: var(--accent-red); color: white;
             border-radius: 50%; width: 24px; height: 24px; display: none; align-items: center; 
-            justify-content: center; font-size: 12px; font-weight: bold; border: 2px solid #000;
+            justify-content: center; font-size: 12px; font-weight: bold; border: 2px solid #000; z-index: 10;
         }
         body.edit-mode .grid-cell.filled .delete-btn { display: flex; }
 
@@ -86,6 +97,7 @@
             display: flex; align-items: center; gap: 12px; color: white; font-weight: bold; border: 1px solid transparent;
         }
         .component-item:active { border-color: var(--accent-blue); }
+        .component-tag { font-size: 10px; background: #000; padding: 2px 6px; border-radius: 4px; color: var(--text-muted); margin-left: auto;}
         .cancel-btn { margin-top: 16px; width: 100%; padding: 12px; background: transparent; color: var(--text-muted); border: 1px solid #333; border-radius: 8px; cursor: pointer;}
     </style>
 </head>
@@ -115,23 +127,28 @@
     </div>
 
     <script>
-        // --- 1. OUR STANDARDIZED DICTIONARY ---
-        // You control this completely. No more guessing community formatting.
+        // --- 1. OUR STANDARDIZED DICTIONARY (NOW WITH GAUGES!) ---
         const DICTIONARY = {
-            "parking_brake": { name: "Parking Brake", icon: "🛑", command: "PARKING_BRAKES" },
-            "gear_toggle": { name: "Landing Gear", icon: "⚙️", command: "GEAR_TOGGLE" },
-            "flaps_up": { name: "Flaps Up", icon: "🔼", command: "FLAPS_DECR" },
-            "flaps_down": { name: "Flaps Down", icon: "🔽", command: "FLAPS_INCR" },
-            "lights_nav": { name: "Nav Lights", icon: "💡", command: "TOGGLE_NAV_LIGHTS" },
-            "ap_master": { name: "Autopilot", icon: "✈️", command: "AUTOPILOT_ON" }
+            // Buttons (Send Data)
+            "parking_brake": { name: "Parking Brake", icon: "🛑", type: "button", command: "PARKING_BRAKES" },
+            "gear_toggle": { name: "Landing Gear", icon: "⚙️", type: "button", command: "GEAR_TOGGLE" },
+            "flaps_up": { name: "Flaps Up", icon: "🔼", type: "button", command: "FLAPS_DECR" },
+            "flaps_down": { name: "Flaps Down", icon: "🔽", type: "button", command: "FLAPS_INCR" },
+            "lights_nav": { name: "Nav Lights", icon: "💡", type: "button", command: "TOGGLE_NAV_LIGHTS" },
+            "ap_master": { name: "Autopilot", icon: "✈️", type: "button", command: "AUTOPILOT_ON" },
+            
+            // Gauges (Receive Data)
+            "gauge_rpm": { name: "Engine RPM", icon: "⏱️", type: "gauge", dataKey: "rpm", unit: "" },
+            "gauge_flaps": { name: "Flaps %", icon: "📐", type: "gauge", dataKey: "flaps_pct", unit: "%" },
+            "gauge_fuel": { name: "Fuel Qty", icon: "⛽", type: "gauge", dataKey: "fuel_pct", unit: " Gal" },
+            "gauge_alt": { name: "Altitude", icon: "⛰️", type: "gauge", dataKey: "altitude", unit: " FT" },
+            "gauge_spd": { name: "Airspeed", icon: "💨", type: "gauge", dataKey: "airspeed", unit: " KTS" }
         };
 
         // --- 2. ENGINE STATE ---
         let isEditMode = true;
         let selectedCellIndex = null;
-        
-        // Load saved layout from local storage, or create a blank 15-cell array
-        let gridState = JSON.parse(localStorage.getItem('msfs_diy_panel')) || new Array(15).fill(null);
+        let gridState = JSON.parse(localStorage.getItem('msfs_diy_panel_v2')) || new Array(15).fill(null);
 
         // --- 3. UI RENDERING ---
         function renderGrid() {
@@ -140,23 +157,26 @@
 
             gridState.forEach((cellData, index) => {
                 const cell = document.createElement('div');
-                cell.className = 'grid-cell ' + (cellData ? 'filled' : 'empty');
                 
                 if (cellData) {
-                    // Cell has a button assigned
                     const dictItem = DICTIONARY[cellData.id];
+                    cell.className = `grid-cell filled type-${dictItem.type}`;
+                    
+                    // We give gauges a unique ID so WebSockets can find and update them instantly
+                    let valueId = dictItem.type === 'gauge' ? `id="gauge-${index}"` : '';
+
                     cell.innerHTML = `
                         <div class="cell-icon">${dictItem.icon}</div>
                         <div class="cell-title">${dictItem.name}</div>
+                        <div class="cell-value" ${valueId}>---${dictItem.unit || ''}</div>
                         <div class="delete-btn" onclick="clearCell(event, ${index})">✕</div>
                     `;
                     
-                    // If in Fly Mode, wire up the MSFS command!
-                    if (!isEditMode) {
+                    if (!isEditMode && dictItem.type === 'button') {
                         cell.onclick = () => sendCommand(dictItem.command);
                     }
                 } else {
-                    // Cell is empty
+                    cell.className = 'grid-cell empty';
                     if (isEditMode) {
                         cell.innerHTML = `<div style="color: #333; font-size: 24px;">+</div>`;
                         cell.onclick = () => openModal(index);
@@ -191,7 +211,12 @@
             for (const [id, data] of Object.entries(DICTIONARY)) {
                 const item = document.createElement('div');
                 item.className = 'component-item';
-                item.innerHTML = `<span style="font-size: 20px;">${data.icon}</span> <span>${data.name}</span>`;
+                let tagColor = data.type === 'gauge' ? 'var(--accent-blue)' : 'var(--accent-green)';
+                item.innerHTML = `
+                    <span style="font-size: 20px;">${data.icon}</span> 
+                    <span>${data.name}</span>
+                    <span class="component-tag" style="color: ${tagColor}">${data.type.toUpperCase()}</span>
+                `;
                 item.onclick = () => assignCell(id);
                 list.appendChild(item);
             }
@@ -213,17 +238,17 @@
         }
 
         function clearCell(event, index) {
-            event.stopPropagation(); // Stop the cell click event from firing
+            event.stopPropagation(); 
             gridState[index] = null;
             saveLayout();
             renderGrid();
         }
 
         function saveLayout() {
-            localStorage.setItem('msfs_diy_panel', JSON.stringify(gridState));
+            localStorage.setItem('msfs_diy_panel_v2', JSON.stringify(gridState));
         }
 
-        // --- 5. NETWORK PIPELINE ---
+        // --- 5. NETWORK PIPELINE & GAUGE INJECTION ---
         const statusText = document.getElementById('connection-status-text');
         const statusDot = document.getElementById('status-dot');
         let ws;
@@ -242,6 +267,32 @@
         function connect() {
             ws = new WebSocket('wss://msfs-relay.onrender.com');
             ws.onopen = () => updateStatus('connected');
+            
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    
+                    // TELEMETRY INJECTION: Loop through our grid and update any Gauges
+                    if (!isEditMode) {
+                        gridState.forEach((cellData, index) => {
+                            if (cellData) {
+                                const dictItem = DICTIONARY[cellData.id];
+                                if (dictItem && dictItem.type === 'gauge') {
+                                    // Match the incoming cloud data key (e.g. "rpm") to the dictionary key
+                                    const simValue = data[dictItem.dataKey];
+                                    if (simValue !== undefined) {
+                                        const gaugeDiv = document.getElementById(`gauge-${index}`);
+                                        if (gaugeDiv) {
+                                            gaugeDiv.innerText = Math.round(simValue) + (dictItem.unit || '');
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                } catch (e) {}
+            };
+            
             ws.onclose = () => {
                 updateStatus('disconnected');
                 setTimeout(connect, 3000);
@@ -250,7 +301,6 @@
 
         function sendCommand(cmd) {
             if (ws && ws.readyState === WebSocket.OPEN) {
-                // We format it as a standard K-Event for our MSFS Swiss Army Knife to catch
                 ws.send(JSON.stringify({ type: "SD_COMMAND", command: cmd }));
             }
         }

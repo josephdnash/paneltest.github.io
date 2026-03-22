@@ -8,68 +8,26 @@
     <title>MSFS Touch Deck</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
-    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
     <style>
         :root {
-            --bg-base: #09090b;
-            --bg-panel: #18181b;
-            --border-panel: #27272a;
-            --text-main: #f4f4f5;
-            --text-muted: #a1a1aa;
-            --accent-blue: #0ea5e9;
-            --accent-green: #10b981;
-            --accent-red: #ef4444;
-            --accent-yellow: #f59e0b;
-            --accent-purple: #8b5cf6; /* New color for the upload button */
+            --bg-base: #09090b; --bg-panel: #18181b; --border-panel: #27272a;
+            --text-main: #f4f4f5; --text-muted: #a1a1aa;
+            --accent-blue: #0ea5e9; --accent-green: #10b981;
+            --accent-red: #ef4444; --accent-yellow: #f59e0b; --accent-purple: #8b5cf6;
         }
 
         body {
-            background-color: var(--bg-base);
-            color: var(--text-main);
-            font-family: 'Inter', sans-serif;
-            margin: 0;
-            padding: 24px;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            box-sizing: border-box;
-            user-select: none;
-            -webkit-user-select: none;
+            background-color: var(--bg-base); color: var(--text-main); font-family: 'Inter', sans-serif;
+            margin: 0; padding: 24px; display: flex; flex-direction: column; height: 100vh; box-sizing: border-box;
+            user-select: none; -webkit-user-select: none;
         }
 
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 32px;
-            padding-bottom: 16px;
-            border-bottom: 1px solid var(--border-panel);
-        }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; padding-bottom: 16px; border-bottom: 1px solid var(--border-panel); }
+        .header h1 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px; color: var(--text-muted); }
 
-        .header h1 {
-            margin: 0;
-            font-size: 24px;
-            font-weight: 800;
-            letter-spacing: -0.5px;
-            color: var(--text-muted);
-        }
-
-        .status-badge {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(0, 0, 0, 0.5);
-            padding: 8px 16px;
-            border-radius: 99px;
-            font-size: 13px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            border: 1px solid var(--border-panel);
-        }
-
+        .status-badge { display: flex; align-items: center; gap: 8px; background: rgba(0, 0, 0, 0.5); padding: 8px 16px; border-radius: 99px; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; border: 1px solid var(--border-panel); }
         .status-indicator { width: 10px; height: 10px; border-radius: 50%; background-color: var(--accent-yellow); box-shadow: 0 0 10px var(--accent-yellow); }
         .status-indicator.connected { background-color: var(--accent-green); box-shadow: 0 0 10px var(--accent-green); }
         .status-indicator.disconnected { background-color: var(--accent-red); box-shadow: 0 0 10px var(--accent-red); }
@@ -81,36 +39,15 @@
         .instrument-unit { font-size: 14px; font-weight: 600; color: #52525b; }
 
         .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; flex-grow: 1; margin-bottom: 24px;}
-        
-        .btn {
-            background: var(--bg-panel); border: 1px solid var(--border-panel); color: var(--text-main);
-            padding: 24px; font-size: 18px; font-weight: 600; font-family: 'Inter', sans-serif;
-            border-radius: 16px; cursor: pointer; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
-        }
+        .btn { background: var(--bg-panel); border: 1px solid var(--border-panel); color: var(--text-main); padding: 24px; font-size: 18px; font-weight: 600; font-family: 'Inter', sans-serif; border-radius: 16px; cursor: pointer; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3); transition: all 0.1s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
         .btn:active { transform: scale(0.96); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); }
-        
         .btn-gear { border-top: 4px solid var(--text-muted); }
         .btn-lights { border-top: 4px solid var(--accent-yellow); }
         .btn-brake { border-top: 4px solid var(--accent-red); grid-column: 1 / -1; background: rgba(239, 68, 68, 0.1); color: var(--accent-red); border: 1px solid rgba(239, 68, 68, 0.3); border-top: 4px solid var(--accent-red); }
 
-        /* File Upload Button Styles */
-        .upload-container {
-            width: 100%;
-            display: flex;
-            justify-content: center;
-            margin-bottom: 20px;
-        }
-        .btn-upload {
-            background: rgba(139, 92, 246, 0.1);
-            color: var(--accent-purple);
-            border: 1px dashed var(--accent-purple);
-            padding: 16px;
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            width: 100%;
-        }
+        .upload-container { width: 100%; display: flex; justify-content: center; margin-bottom: 20px; }
+        .btn-upload { background: rgba(139, 92, 246, 0.1); color: var(--accent-purple); border: 1px dashed var(--accent-purple); padding: 16px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; width: 100%; cursor: pointer; border-radius: 12px; transition: background 0.2s;}
+        .btn-upload:hover { background: rgba(139, 92, 246, 0.2); }
     </style>
 </head>
 <body>
@@ -125,7 +62,7 @@
 
     <div class="upload-container">
         <input type="file" id="profile-upload" accept=".streamDeckProfile,.zip" style="display: none;">
-        <button class="btn btn-upload" onclick="document.getElementById('profile-upload').click()">
+        <button class="btn-upload" onclick="document.getElementById('profile-upload').click()">
             📥 Import .streamDeckProfile
         </button>
     </div>
@@ -157,7 +94,6 @@
         let ws;
         let gearIsDown = true; 
 
-        // --- CLOUD CONNECTION LOGIC ---
         function updateStatus(state, customText = null) {
             statusDot.className = 'status-indicator'; 
             if (state === 'connected') {
@@ -200,51 +136,58 @@
             }
         }
 
-        // --- NEW: VIRTUAL ENGINE / PROFILE IMPORTER LOGIC ---
+        // --- THE VIRTUAL ENGINE (ZIP INCEPTION FIX) ---
         document.getElementById('profile-upload').addEventListener('change', async function(event) {
             const file = event.target.files[0];
             if (!file) return;
 
             console.log(`>>> ATTEMPTING TO UNZIP: ${file.name} <<<`);
-            updateStatus('connecting', 'UNZIPPING PROFILE...');
+            updateStatus('connecting', 'ANALYZING ARCHIVE...');
 
             try {
-                // 1. Crack open the ZIP file in browser memory
-                const zip = await JSZip.loadAsync(file);
-                console.log("ZIP Contents:", Object.keys(zip.files));
+                let zip = await JSZip.loadAsync(file);
 
-                // 2. Stream Deck profiles usually hide their data in a manifest.json file
-                // We use a regex search to find it no matter what subfolder it is in
+                // 1. THE INCEPTION CHECK: Look for a .streamDeckProfile inside the uploaded Zip
+                // Some browsers/OS might change the name slightly when zipping, so we use a regex
+                const nestedProfiles = zip.file(/\.streamDeckProfile$/i);
+                
+                if (nestedProfiles.length > 0) {
+                    console.log(`>>> Found nested profile: ${nestedProfiles[0].name}. Extracting inner archive...`);
+                    const innerArchive = await nestedProfiles[0].async("blob");
+                    // Override the zip variable with the newly unzipped inner file
+                    zip = await JSZip.loadAsync(innerArchive);
+                }
+
+                // 2. FIND ALL MANIFESTS: Elgato puts a manifest in the root, and one inside every "Page" folder
                 const manifestFiles = zip.file(/manifest\.json$/i);
                 
                 if (manifestFiles.length === 0) {
-                    throw new Error("No manifest.json found inside this profile.");
+                    throw new Error("No manifest.json found. Ensure this is a valid Stream Deck export.");
                 }
 
-                // 3. Extract the JSON text and parse it into a Javascript Object
-                const manifestContent = await manifestFiles[0].async("string");
-                const manifestData = JSON.parse(manifestContent);
+                console.log(`>>> FOUND ${manifestFiles.length} MANIFEST FILE(S). DECODING... <<<`);
 
-                // 4. Print the payload to the console for inspection!
-                console.log(">>> MANIFEST SUCCESSFULLY DECODED <<<");
-                console.log("Profile Name:", manifestData.Name || "Custom Profile");
-                console.log("Full Data Payload:", manifestData);
+                // 3. PRINT THEM ALL TO THE CONSOLE
+                for (let i = 0; i < manifestFiles.length; i++) {
+                    const content = await manifestFiles[i].async("string");
+                    const data = JSON.parse(content);
+                    
+                    console.log(`\n--- FILE: ${manifestFiles[i].name} ---`);
+                    console.log(data);
+                }
 
-                // Briefly flash a success message before returning to network status
-                let profileName = manifestData.Name ? manifestData.Name.toUpperCase() : "PROFILE";
-                updateStatus('connected', `LOADED: ${profileName}`);
-                setTimeout(() => updateStatus(ws && ws.readyState === 1 ? 'connected' : 'disconnected'), 3000);
+                updateStatus('connected', `DECODED ${manifestFiles.length} FILES (SEE CONSOLE)`);
+                setTimeout(() => updateStatus(ws && ws.readyState === 1 ? 'connected' : 'disconnected'), 3500);
 
             } catch (error) {
                 console.error(">>> UNZIP ERROR: ", error);
                 updateStatus('disconnected', 'UPLOAD FAILED (SEE CONSOLE)');
             }
             
-            // Reset the input so you can upload the same file again if needed
+            // Clear the input so the same file can be uploaded again if needed
             event.target.value = ''; 
         });
 
-        // Boot up
         connect();
     </script>
 </body>

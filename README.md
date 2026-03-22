@@ -1,2 +1,2 @@
-# centennial-simulations.github.io
-It's another website!
+# paneltest.github.io
+It's another website! With panels!

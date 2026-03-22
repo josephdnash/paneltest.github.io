@@ -48,7 +48,7 @@
 
         .grid-cell {
             background-color: #111; border-radius: 12px; display: flex; flex-direction: column; 
-            align-items: center; justify-content: center; transition: all 0.1s; position: relative;
+            align-items: center; justify-content: center; transition: all 0.1s; position: relative; padding: 8px;
         }
 
         /* Edit Mode Styles */
@@ -56,23 +56,39 @@
         body.edit-mode .grid-cell:hover { border-color: var(--accent-blue); background-color: #1a1a2e; }
         body.edit-mode .grid-cell.filled { border: 2px solid var(--accent-blue); }
         
-        /* Fly Mode Styles */
+        /* Fly Mode Base Styles */
         body.fly-mode .grid-cell { border: 1px solid #333; box-shadow: 0 4px 8px rgba(0,0,0,0.5); }
         body.fly-mode .grid-cell.empty { opacity: 0; pointer-events: none; }
         
-        /* Button specific Fly Mode */
+        /* BUTTON Fly Mode */
         body.fly-mode .grid-cell.type-button:active { transform: scale(0.92); box-shadow: 0 0 2px rgba(0,0,0,0.8); border-color: var(--accent-blue); }
         
-        /* Gauge specific Fly Mode */
-        body.fly-mode .grid-cell.type-gauge { background-color: var(--bg-panel); border-top: 4px solid var(--accent-blue); }
+        /* GAUGE & ROTARY Fly Mode */
+        body.fly-mode .grid-cell.type-gauge, body.fly-mode .grid-cell.type-rotary { 
+            background-color: var(--bg-panel); border-top: 4px solid var(--accent-blue); justify-content: space-evenly;
+        }
 
-        .cell-icon { font-size: 32px; margin-bottom: 8px; }
+        .cell-icon { font-size: 32px; margin-bottom: 4px; }
         .cell-title { font-size: 12px; font-weight: bold; text-align: center; padding: 0 4px; color: var(--text-muted); text-transform: uppercase;}
         
-        /* The dynamic number readout for gauges */
-        .cell-value { font-family: 'Roboto Mono', monospace; font-size: 28px; font-weight: 700; color: var(--text-main); margin-top: 4px; display: none;}
+        .cell-value { font-family: 'Roboto Mono', monospace; font-size: 28px; font-weight: 700; color: var(--text-main); display: none;}
         body.fly-mode .grid-cell.type-gauge .cell-value { display: block; }
-        body.fly-mode .grid-cell.type-gauge .cell-icon { display: none; } /* Hide icon to make room for numbers */
+        body.fly-mode .grid-cell.type-gauge .cell-icon { display: none; }
+
+        /* --- NEW: ROTARY STYLES --- */
+        .rotary-container { 
+            display: none; width: 100%; justify-content: space-between; align-items: center; 
+            background: #000; border-radius: 8px; padding: 4px; box-sizing: border-box; margin-top: 4px;
+        }
+        body.fly-mode .grid-cell.type-rotary .rotary-container { display: flex; }
+        body.fly-mode .grid-cell.type-rotary .cell-icon { display: none; }
+        body.fly-mode .grid-cell.type-rotary .cell-value { display: block; font-size: 20px; color: var(--accent-blue); margin: 0;}
+        
+        .rotary-btn { 
+            background: #333; color: white; border: none; border-radius: 6px; width: 36px; height: 36px; 
+            font-size: 20px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+        .rotary-btn:active { background: var(--accent-blue); transform: scale(0.9); }
 
         .delete-btn { 
             position: absolute; top: -8px; right: -8px; background: var(--accent-red); color: white;
@@ -91,7 +107,7 @@
             border: 1px solid var(--border-panel);
         }
         .modal-title { margin-top: 0; font-size: 18px; color: var(--text-main); margin-bottom: 16px; }
-        .component-list { display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto; }
+        .component-list { display: flex; flex-direction: column; gap: 8px; max-height: 400px; overflow-y: auto; }
         .component-item {
             background: #27272a; padding: 12px; border-radius: 8px; cursor: pointer;
             display: flex; align-items: center; gap: 12px; color: white; font-weight: bold; border: 1px solid transparent;
@@ -127,9 +143,9 @@
     </div>
 
     <script>
-        // --- 1. OUR STANDARDIZED DICTIONARY (NOW WITH GAUGES!) ---
+        // --- 1. OUR STANDARDIZED DICTIONARY (NOW WITH ROTARIES) ---
         const DICTIONARY = {
-            // Buttons (Send Data)
+            // Buttons
             "parking_brake": { name: "Parking Brake", icon: "🛑", type: "button", command: "PARKING_BRAKES" },
             "gear_toggle": { name: "Landing Gear", icon: "⚙️", type: "button", command: "GEAR_TOGGLE" },
             "flaps_up": { name: "Flaps Up", icon: "🔼", type: "button", command: "FLAPS_DECR" },
@@ -137,18 +153,23 @@
             "lights_nav": { name: "Nav Lights", icon: "💡", type: "button", command: "TOGGLE_NAV_LIGHTS" },
             "ap_master": { name: "Autopilot", icon: "✈️", type: "button", command: "AUTOPILOT_ON" },
             
-            // Gauges (Receive Data)
+            // Gauges
             "gauge_rpm": { name: "Engine RPM", icon: "⏱️", type: "gauge", dataKey: "rpm", unit: "" },
             "gauge_flaps": { name: "Flaps %", icon: "📐", type: "gauge", dataKey: "flaps_pct", unit: "%" },
             "gauge_fuel": { name: "Fuel Qty", icon: "⛽", type: "gauge", dataKey: "fuel_pct", unit: " Gal" },
             "gauge_alt": { name: "Altitude", icon: "⛰️", type: "gauge", dataKey: "altitude", unit: " FT" },
-            "gauge_spd": { name: "Airspeed", icon: "💨", type: "gauge", dataKey: "airspeed", unit: " KTS" }
+            "gauge_spd": { name: "Airspeed", icon: "💨", type: "gauge", dataKey: "airspeed", unit: " KTS" },
+
+            // NEW: Rotaries
+            "rotary_hdg": { name: "AP Heading", icon: "🧭", type: "rotary", dataKey: "ap_hdg", unit: "°", cmdDec: "HEADING_BUG_DEC", cmdInc: "HEADING_BUG_INC" },
+            "rotary_alt": { name: "AP Altitude", icon: "↕️", type: "rotary", dataKey: "ap_alt", unit: " FT", cmdDec: "AP_ALT_VAR_DEC", cmdInc: "AP_ALT_VAR_INC" },
+            "rotary_baro": { name: "Barometer", icon: "☁️", type: "rotary", dataKey: "baro", unit: " hPa", cmdDec: "KOHLSMAN_DEC", cmdInc: "KOHLSMAN_INC" }
         };
 
         // --- 2. ENGINE STATE ---
         let isEditMode = true;
         let selectedCellIndex = null;
-        let gridState = JSON.parse(localStorage.getItem('msfs_diy_panel_v2')) || new Array(15).fill(null);
+        let gridState = JSON.parse(localStorage.getItem('msfs_diy_panel_v3')) || new Array(15).fill(null);
 
         // --- 3. UI RENDERING ---
         function renderGrid() {
@@ -162,18 +183,38 @@
                     const dictItem = DICTIONARY[cellData.id];
                     cell.className = `grid-cell filled type-${dictItem.type}`;
                     
-                    // We give gauges a unique ID so WebSockets can find and update them instantly
-                    let valueId = dictItem.type === 'gauge' ? `id="gauge-${index}"` : '';
+                    let valueId = (dictItem.type === 'gauge' || dictItem.type === 'rotary') ? `id="gauge-${index}"` : '';
 
-                    cell.innerHTML = `
+                    // Base HTML for the cell
+                    let innerHTML = `
                         <div class="cell-icon">${dictItem.icon}</div>
                         <div class="cell-title">${dictItem.name}</div>
                         <div class="cell-value" ${valueId}>---${dictItem.unit || ''}</div>
-                        <div class="delete-btn" onclick="clearCell(event, ${index})">✕</div>
                     `;
+
+                    // Inject Rotary Controls if applicable
+                    if (dictItem.type === 'rotary') {
+                        innerHTML += `
+                            <div class="rotary-container">
+                                <button class="rotary-btn dec-btn">-</button>
+                                <div class="cell-value" ${valueId}>---${dictItem.unit || ''}</div>
+                                <button class="rotary-btn inc-btn">+</button>
+                            </div>
+                        `;
+                    }
+
+                    innerHTML += `<div class="delete-btn" onclick="clearCell(event, ${index})">✕</div>`;
+                    cell.innerHTML = innerHTML;
                     
-                    if (!isEditMode && dictItem.type === 'button') {
-                        cell.onclick = () => sendCommand(dictItem.command);
+                    // Wire up Interactions
+                    if (!isEditMode) {
+                        if (dictItem.type === 'button') {
+                            cell.onclick = () => sendCommand(dictItem.command);
+                        } else if (dictItem.type === 'rotary') {
+                            // Stop propagation so clicking the buttons doesn't trigger anything else
+                            cell.querySelector('.dec-btn').onclick = (e) => { e.stopPropagation(); sendCommand(dictItem.cmdDec); };
+                            cell.querySelector('.inc-btn').onclick = (e) => { e.stopPropagation(); sendCommand(dictItem.cmdInc); };
+                        }
                     }
                 } else {
                     cell.className = 'grid-cell empty';
@@ -211,7 +252,11 @@
             for (const [id, data] of Object.entries(DICTIONARY)) {
                 const item = document.createElement('div');
                 item.className = 'component-item';
-                let tagColor = data.type === 'gauge' ? 'var(--accent-blue)' : 'var(--accent-green)';
+                
+                let tagColor = 'var(--accent-green)'; // Button
+                if (data.type === 'gauge') tagColor = 'var(--accent-blue)';
+                if (data.type === 'rotary') tagColor = 'var(--accent-yellow)';
+
                 item.innerHTML = `
                     <span style="font-size: 20px;">${data.icon}</span> 
                     <span>${data.name}</span>
@@ -245,10 +290,10 @@
         }
 
         function saveLayout() {
-            localStorage.setItem('msfs_diy_panel_v2', JSON.stringify(gridState));
+            localStorage.setItem('msfs_diy_panel_v3', JSON.stringify(gridState));
         }
 
-        // --- 5. NETWORK PIPELINE & GAUGE INJECTION ---
+        // --- 5. NETWORK PIPELINE ---
         const statusText = document.getElementById('connection-status-text');
         const statusDot = document.getElementById('status-dot');
         let ws;
@@ -272,19 +317,18 @@
                 try {
                     const data = JSON.parse(event.data);
                     
-                    // TELEMETRY INJECTION: Loop through our grid and update any Gauges
                     if (!isEditMode) {
                         gridState.forEach((cellData, index) => {
                             if (cellData) {
                                 const dictItem = DICTIONARY[cellData.id];
-                                if (dictItem && dictItem.type === 'gauge') {
-                                    // Match the incoming cloud data key (e.g. "rpm") to the dictionary key
+                                if (dictItem && (dictItem.type === 'gauge' || dictItem.type === 'rotary')) {
                                     const simValue = data[dictItem.dataKey];
                                     if (simValue !== undefined) {
-                                        const gaugeDiv = document.getElementById(`gauge-${index}`);
-                                        if (gaugeDiv) {
-                                            gaugeDiv.innerText = Math.round(simValue) + (dictItem.unit || '');
-                                        }
+                                        // Notice we use querySelectorAll because rotaries duplicate the cell-value class for styling
+                                        const valueDivs = document.querySelectorAll(`#gauge-${index}`);
+                                        valueDivs.forEach(div => {
+                                            div.innerText = Math.round(simValue) + (dictItem.unit || '');
+                                        });
                                     }
                                 }
                             }
@@ -305,7 +349,6 @@
             }
         }
 
-        // Boot up
         connect();
         renderGrid();
     </script>

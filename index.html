@@ -57,18 +57,28 @@
         body.edit-mode .grid-cell.filled { border: 2px solid var(--accent-blue); }
         
         /* Fly Mode Base Styles */
-        body.fly-mode .grid-cell { border: 1px solid #333; box-shadow: 0 4px 8px rgba(0,0,0,0.5); }
+        body.fly-mode .grid-cell { border: 1px solid #333; box-shadow: 0 4px 8px rgba(0,0,0,0.5); transition: border-color 0.1s, background-color 0.1s;}
         body.fly-mode .grid-cell.empty { opacity: 0; pointer-events: none; }
         
         /* BUTTON Fly Mode */
         body.fly-mode .grid-cell.type-button:active { transform: scale(0.92); box-shadow: 0 0 2px rgba(0,0,0,0.8); border-color: var(--accent-blue); }
+        
+        /* --- NEW: ACTIVE BUTTON STATE --- */
+        body.fly-mode .grid-cell.type-button.active {
+            border-color: var(--accent-green);
+            background-color: rgba(16, 185, 129, 0.1);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+        }
+        body.fly-mode .grid-cell.type-button.active .cell-icon {
+            filter: drop-shadow(0px 0px 8px rgba(255, 255, 255, 0.8));
+        }
         
         /* GAUGE & ROTARY Fly Mode */
         body.fly-mode .grid-cell.type-gauge, body.fly-mode .grid-cell.type-rotary { 
             background-color: var(--bg-panel); border-top: 4px solid var(--accent-blue); justify-content: space-evenly;
         }
 
-        .cell-icon { font-size: 32px; margin-bottom: 4px; }
+        .cell-icon { font-size: 32px; margin-bottom: 4px; transition: filter 0.2s;}
         .cell-title { font-size: 12px; font-weight: bold; text-align: center; padding: 0 4px; color: var(--text-muted); text-transform: uppercase;}
         
         .cell-value { font-family: 'Roboto Mono', monospace; font-size: 28px; font-weight: 700; color: var(--text-main); display: none;}
@@ -143,16 +153,16 @@
     </div>
 
     <script>
-        // --- 1. THE NATIVE MSFS DICTIONARY ---
+        // --- 1. OUR DICTIONARY (NOW WITH STATE KEYS) ---
         const DICTIONARY = {
-            // Buttons
-            "parking_brake": { name: "Parking Brake", icon: "🛑", type: "button", command: "PARKING_BRAKES" },
-            "gear_toggle": { name: "Landing Gear", icon: "⚙️", type: "button", command: "GEAR_TOGGLE" },
+            // Buttons with state monitoring
+            "parking_brake": { name: "Parking Brake", icon: "🛑", type: "button", command: "PARKING_BRAKES", stateKey: "parking_brake_state" },
+            "gear_toggle": { name: "Landing Gear", icon: "⚙️", type: "button", command: "GEAR_TOGGLE", stateKey: "gear_state" },
+            "lights_nav": { name: "Nav Lights", icon: "💡", type: "button", command: "TOGGLE_NAV_LIGHTS", stateKey: "nav_light_state" },
+            
+            // Standard Buttons
             "flaps_up": { name: "Flaps Up", icon: "🔼", type: "button", command: "FLAPS_DECR" },
             "flaps_down": { name: "Flaps Down", icon: "🔽", type: "button", command: "FLAPS_INCR" },
-            "lights_nav": { name: "Nav Lights", icon: "💡", type: "button", command: "TOGGLE_NAV_LIGHTS" },
-            
-            // Autopilot Modals
             "ap_master": { name: "AP Master", icon: "✈️", type: "button", command: "AUTOPILOT_ON" },
             "ap_hdg_hold": { name: "HDG Hold", icon: "🎯", type: "button", command: "AP_HDG_HOLD" },
             "ap_alt_hold": { name: "ALT Hold", icon: "⏫", type: "button", command: "AP_ALT_HOLD" },
@@ -174,7 +184,7 @@
         // --- 2. ENGINE STATE ---
         let isEditMode = true;
         let selectedCellIndex = null;
-        let gridState = JSON.parse(localStorage.getItem('msfs_diy_panel_v4')) || new Array(15).fill(null);
+        let gridState = JSON.parse(localStorage.getItem('msfs_diy_panel_v5')) || new Array(15).fill(null);
 
         // --- 3. UI RENDERING ---
         function renderGrid() {
@@ -183,6 +193,8 @@
 
             gridState.forEach((cellData, index) => {
                 const cell = document.createElement('div');
+                // Give the cell a unique ID so we can target it instantly for state updates
+                cell.id = `cell-${index}`;
                 
                 if (cellData) {
                     const dictItem = DICTIONARY[cellData.id];
@@ -296,10 +308,10 @@
         }
 
         function saveLayout() {
-            localStorage.setItem('msfs_diy_panel_v4', JSON.stringify(gridState));
+            localStorage.setItem('msfs_diy_panel_v5', JSON.stringify(gridState));
         }
 
-        // --- 5. NETWORK PIPELINE ---
+        // --- 5. NETWORK PIPELINE & REACTIVE STATES ---
         const statusText = document.getElementById('connection-status-text');
         const statusDot = document.getElementById('status-dot');
         let ws;
@@ -327,6 +339,8 @@
                         gridState.forEach((cellData, index) => {
                             if (cellData) {
                                 const dictItem = DICTIONARY[cellData.id];
+                                
+                                // 1. Update Gauges and Rotaries
                                 if (dictItem && (dictItem.type === 'gauge' || dictItem.type === 'rotary')) {
                                     const simValue = data[dictItem.dataKey];
                                     if (simValue !== undefined) {
@@ -334,6 +348,22 @@
                                         valueDivs.forEach(div => {
                                             div.innerText = Math.round(simValue) + (dictItem.unit || '');
                                         });
+                                    }
+                                }
+                                
+                                // 2. Update Active Button States
+                                if (dictItem && dictItem.type === 'button' && dictItem.stateKey) {
+                                    const stateValue = data[dictItem.stateKey];
+                                    if (stateValue !== undefined) {
+                                        const cellEl = document.getElementById(`cell-${index}`);
+                                        if (cellEl) {
+                                            // If the simulator says the system is ON (1), add the active class
+                                            if (stateValue === 1 || stateValue === true) {
+                                                cellEl.classList.add('active');
+                                            } else {
+                                                cellEl.classList.remove('active');
+                                            }
+                                        }
                                     }
                                 }
                             }

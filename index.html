@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>MSFS Touch Deck</title>
@@ -39,7 +40,9 @@
         .instrument-unit { font-size: 14px; font-weight: 600; color: #52525b; }
 
         .upload-container { width: 100%; display: flex; justify-content: center; margin-bottom: 24px; }
-        .btn-upload { background: rgba(139, 92, 246, 0.1); color: var(--accent-purple); border: 1px dashed var(--accent-purple); padding: 16px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; width: 100%; cursor: pointer; border-radius: 12px; transition: background 0.2s; font-weight: bold;}
+        
+        /* Updated: Native HTML Label for flawless mobile support */
+        .btn-upload { background: rgba(139, 92, 246, 0.1); color: var(--accent-purple); border: 1px dashed var(--accent-purple); padding: 16px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; width: 100%; cursor: pointer; border-radius: 12px; transition: background 0.2s; font-weight: bold; text-align: center; box-sizing: border-box; display: block;}
         .btn-upload:hover { background: rgba(139, 92, 246, 0.2); }
 
         /* THE VIRTUAL ENGINE GRID */
@@ -71,9 +74,9 @@
 
     <div class="upload-container">
         <input type="file" id="profile-upload" accept=".streamDeckProfile,.zip" style="display: none;">
-        <button class="btn-upload" onclick="document.getElementById('profile-upload').click()">
+        <label for="profile-upload" class="btn-upload">
             📥 Import Custom Profile
-        </button>
+        </label>
     </div>
 
     <div class="telemetry-grid">
@@ -103,10 +106,10 @@
         let ws;
 
         // --- GLOBAL ENGINE STATE ---
-        let profilesDB = {};         // Stores every page/folder in the profile
-        let profileHistory = [];     // Tracks our folder navigation history
+        let profilesDB = {};         
+        let profileHistory = [];     
         let currentProfileUUID = null;
-        let globalMaxCol = 4;        // Defaults for standard 5x3 Grid
+        let globalMaxCol = 4;        
         let globalMaxRow = 2;
 
         // --- NETWORK PIPELINE ---
@@ -148,9 +151,8 @@
 
             currentProfileUUID = profileId;
             const deckContainer = document.getElementById('dynamic-deck');
-            deckContainer.innerHTML = ''; // Clear current screen
+            deckContainer.innerHTML = ''; 
 
-            // Apply global grid size to prevent layout snapping when entering folders
             deckContainer.style.gridTemplateColumns = `repeat(${globalMaxCol + 1}, 1fr)`;
             deckContainer.style.gridTemplateRows = `repeat(${globalMaxRow + 1}, 1fr)`;
 
@@ -165,4 +167,161 @@
                 btn.style.gridColumn = col + 1;
                 btn.style.gridRow = row + 1;
 
-                // 1. EXTRACT GRAPHICS
+                let imgBase64 = null;
+                if (actionData.Settings && actionData.Settings.ImageOff_base64) imgBase64 = actionData.Settings.ImageOff_base64;
+                else if (actionData.Settings && actionData.Settings.ImageOn_base64) imgBase64 = actionData.Settings.ImageOn_base64;
+                
+                if (imgBase64) {
+                    btn.style.backgroundImage = `url('data:image/png;base64,${imgBase64}')`;
+                }
+
+                if (actionData.States && actionData.States.length > 0 && actionData.States[0].Title) {
+                    let titleSpan = document.createElement('span');
+                    titleSpan.innerHTML = actionData.States[0].Title.replace(/\\n/g, '<br>');
+                    if (actionData.States[0].TitleColor) titleSpan.style.color = actionData.States[0].TitleColor;
+                    btn.appendChild(titleSpan);
+                }
+
+                let actionUUID = actionData.UUID;
+
+                if (actionUUID === "com.elgato.streamdeck.profile.openchild") {
+                    if (!imgBase64) btn.innerHTML = `<span class="nav-icon">📁</span>` + btn.innerHTML;
+                    let childId = actionData.Settings ? actionData.Settings.ProfileUUID : null;
+                    if (childId && profilesDB[childId]) {
+                        btn.onclick = () => {
+                            profileHistory.push(currentProfileUUID);
+                            renderVirtualDeck(childId);
+                        };
+                    }
+                } 
+                else if (actionUUID === "com.elgato.streamdeck.profile.backtoparent") {
+                    if (!imgBase64) btn.innerHTML = `<span class="nav-icon">🔙</span>` + btn.innerHTML;
+                    btn.onclick = () => {
+                        if (profileHistory.length > 0) {
+                            let parentId = profileHistory.pop();
+                            renderVirtualDeck(parentId);
+                        }
+                    };
+                } 
+                else {
+                    let msfsCommand = actionData.Settings && actionData.Settings.ToggleValue ? actionData.Settings.ToggleValue : null;
+                    if (msfsCommand) {
+                        btn.onclick = () => {
+                            if (ws && ws.readyState === WebSocket.OPEN) {
+                                ws.send(JSON.stringify({ type: "SD_COMMAND", command: msfsCommand }));
+                            }
+                        };
+                    }
+                }
+
+                deckContainer.appendChild(btn);
+            }
+        }
+
+        // --- THE DEEP UNZIPPER ---
+        document.getElementById('profile-upload').addEventListener('change', async function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            console.log(`>>> INITIALIZING UPLOAD: ${file.name}`);
+            updateStatus('connecting', 'ANALYZING MULTI-PAGE ARCHIVE...');
+            
+            profilesDB = {};
+            profileHistory = [];
+            currentProfileUUID = null;
+            let rootProfileId = null;
+            let backupRootId = null;
+            let maxActions = -1;
+
+            try {
+                let zip = await JSZip.loadAsync(file);
+
+                const nestedProfiles = zip.file(/\.streamDeckProfile$/i);
+                if (nestedProfiles.length > 0) {
+                    console.log(`>>> NESTED PROFILE DETECTED: ${nestedProfiles[0].name}`);
+                    const innerArchive = await nestedProfiles[0].async("blob");
+                    zip = await JSZip.loadAsync(innerArchive);
+                }
+
+                // FIX: Actively ignore hidden Mac system folders that crash the JSON parser
+                const manifestFiles = zip.file(/manifest\.json$/i).filter(f => !f.name.includes('__MACOSX'));
+                if (manifestFiles.length === 0) throw new Error("No manifest found.");
+
+                console.log(`>>> FOUND ${manifestFiles.length} CLEAN MANIFEST FILES`);
+
+                const rootManifest = manifestFiles.find(f => f.name.toLowerCase() === 'manifest.json');
+                if (rootManifest) {
+                    try {
+                        let rootData = JSON.parse(await rootManifest.async("string"));
+                        if (rootData.Profiles && rootData.Profiles.length > 0) {
+                            let prefix = rootData.Profiles[0].Prefix || "";
+                            let match = prefix.match(/([a-zA-Z0-9\-]+)\.sdProfile/i);
+                            if (match) rootProfileId = match[1];
+                        }
+                    } catch(e) {
+                        console.warn(">>> COULD NOT PARSE ROOT MANIFEST: ", e);
+                    }
+                }
+
+                globalMaxCol = 4;
+                globalMaxRow = 2;
+
+                for (let i = 0; i < manifestFiles.length; i++) {
+                    let fileName = manifestFiles[i].name;
+                    if (fileName.toLowerCase() === 'manifest.json') continue; 
+                    
+                    let match = fileName.match(/([a-zA-Z0-9\-]+)\.sdProfile\/manifest\.json$/i);
+                    if (match) {
+                        let pId = match[1];
+                        try {
+                            // Try/Catch around individual pages so one corrupted folder doesn't nuke the whole app
+                            let content = await manifestFiles[i].async("string");
+                            let data = JSON.parse(content);
+                            
+                            if (data.Actions) {
+                                profilesDB[pId] = data.Actions;
+                                
+                                let actionCount = Object.keys(data.Actions).length;
+                                if (actionCount > maxActions) {
+                                    maxActions = actionCount;
+                                    backupRootId = pId;
+                                }
+
+                                for (let coordKey in data.Actions) {
+                                    let parts = coordKey.split(',');
+                                    let col = parseInt(parts[0]);
+                                    let row = parseInt(parts[1]);
+                                    if (col > globalMaxCol) globalMaxCol = col;
+                                    if (row > globalMaxRow) globalMaxRow = row;
+                                }
+                            }
+                        } catch (err) {
+                            console.warn(`>>> CORRUPTED PAGE SKIPPED: ${fileName}`);
+                        }
+                    }
+                }
+
+                if (!rootProfileId) rootProfileId = backupRootId;
+
+                if (rootProfileId && profilesDB[rootProfileId]) {
+                    console.log(`>>> RENDERING ROOT FOLDER: ${rootProfileId}`);
+                    updateStatus('connected', `PROFILE LOADED!`);
+                    renderVirtualDeck(rootProfileId);
+                } else {
+                    throw new Error("No actions extracted from profile.");
+                }
+
+                setTimeout(() => updateStatus(ws && ws.readyState === 1 ? 'connected' : 'disconnected'), 3500);
+
+            } catch (error) {
+                console.error(">>> UNZIP ERROR: ", error);
+                updateStatus('disconnected', 'UPLOAD FAILED (CHECK CONSOLE)');
+            }
+            
+            event.target.value = ''; 
+        });
+
+        connect();
+    </script>
+</body>
+</html>

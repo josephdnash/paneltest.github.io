@@ -6,19 +6,23 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>MSFS Touch Deck</title>
+    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
     
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
     <style>
         :root {
-            --bg-base: #09090b;       /* Deep obsidian */
-            --bg-panel: #18181b;      /* Dark gray for panels */
-            --border-panel: #27272a;  
+            --bg-base: #09090b;
+            --bg-panel: #18181b;
+            --border-panel: #27272a;
             --text-main: #f4f4f5;
             --text-muted: #a1a1aa;
-            --accent-blue: #0ea5e9;   /* MSFS / Avionics Blue */
-            --accent-green: #10b981;  /* Status OK */
-            --accent-red: #ef4444;    /* Warnings / Brakes */
-            --accent-yellow: #f59e0b; /* Lights / Cautions */
+            --accent-blue: #0ea5e9;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-yellow: #f59e0b;
+            --accent-purple: #8b5cf6; /* New color for the upload button */
         }
 
         body {
@@ -31,11 +35,10 @@
             flex-direction: column;
             height: 100vh;
             box-sizing: border-box;
-            user-select: none; /* Prevents text selection when tapping rapidly */
+            user-select: none;
             -webkit-user-select: none;
         }
 
-        /* --- Header & Status --- */
         .header {
             display: flex;
             justify-content: space-between;
@@ -67,122 +70,46 @@
             border: 1px solid var(--border-panel);
         }
 
-        .status-indicator {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background-color: var(--accent-yellow);
-            box-shadow: 0 0 10px var(--accent-yellow);
-            transition: all 0.3s ease;
-        }
+        .status-indicator { width: 10px; height: 10px; border-radius: 50%; background-color: var(--accent-yellow); box-shadow: 0 0 10px var(--accent-yellow); }
+        .status-indicator.connected { background-color: var(--accent-green); box-shadow: 0 0 10px var(--accent-green); }
+        .status-indicator.disconnected { background-color: var(--accent-red); box-shadow: 0 0 10px var(--accent-red); }
 
-        .status-indicator.connected {
-            background-color: var(--accent-green);
-            box-shadow: 0 0 10px var(--accent-green);
-        }
+        .telemetry-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+        .instrument { background: var(--bg-panel); border: 1px solid var(--border-panel); border-radius: 20px; padding: 32px 24px; display: flex; flex-direction: column; align-items: center; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.2); }
+        .instrument-label { font-size: 14px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; }
+        .instrument-value { font-family: 'Roboto Mono', monospace; font-size: 64px; font-weight: 700; color: var(--accent-blue); text-shadow: 0 0 20px rgba(14, 165, 233, 0.4); line-height: 1; margin-bottom: 8px; font-variant-numeric: tabular-nums; }
+        .instrument-unit { font-size: 14px; font-weight: 600; color: #52525b; }
 
-        .status-indicator.disconnected {
-            background-color: var(--accent-red);
-            box-shadow: 0 0 10px var(--accent-red);
-        }
-
-        /* --- Telemetry Grid --- */
-        .telemetry-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 24px;
-            margin-bottom: 40px;
-        }
-
-        .instrument {
-            background: var(--bg-panel);
-            border: 1px solid var(--border-panel);
-            border-radius: 20px;
-            padding: 32px 24px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.2);
-        }
-
-        .instrument-label {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-bottom: 8px;
-        }
-
-        .instrument-value {
-            font-family: 'Roboto Mono', monospace;
-            font-size: 64px;
-            font-weight: 700;
-            color: var(--accent-blue);
-            text-shadow: 0 0 20px rgba(14, 165, 233, 0.4);
-            line-height: 1;
-            margin-bottom: 8px;
-            font-variant-numeric: tabular-nums; /* Keeps numbers from jumping horizontally */
-        }
-
-        .instrument-unit {
-            font-size: 14px;
-            font-weight: 600;
-            color: #52525b;
-        }
-
-        /* --- Controls Grid --- */
-        .controls {
-            display: grid;
-            grid-template-columns: 1fr 1fr; /* Two columns for buttons */
-            gap: 20px;
-            flex-grow: 1; /* Pushes to fill remaining space */
-        }
-
-        .btn {
-            background: var(--bg-panel);
-            border: 1px solid var(--border-panel);
-            color: var(--text-main);
-            padding: 24px;
-            font-size: 18px;
-            font-weight: 600;
-            font-family: 'Inter', sans-serif;
-            border-radius: 16px;
-            cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .btn:active {
-            transform: scale(0.96);
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-        }
-
-        /* Specific Button Accents */
-        .btn-gear {
-            border-top: 4px solid var(--text-muted);
-        }
+        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; flex-grow: 1; margin-bottom: 24px;}
         
-        .btn-lights {
-            border-top: 4px solid var(--accent-yellow);
+        .btn {
+            background: var(--bg-panel); border: 1px solid var(--border-panel); color: var(--text-main);
+            padding: 24px; font-size: 18px; font-weight: 600; font-family: 'Inter', sans-serif;
+            border-radius: 16px; cursor: pointer; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
         }
+        .btn:active { transform: scale(0.96); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); }
+        
+        .btn-gear { border-top: 4px solid var(--text-muted); }
+        .btn-lights { border-top: 4px solid var(--accent-yellow); }
+        .btn-brake { border-top: 4px solid var(--accent-red); grid-column: 1 / -1; background: rgba(239, 68, 68, 0.1); color: var(--accent-red); border: 1px solid rgba(239, 68, 68, 0.3); border-top: 4px solid var(--accent-red); }
 
-        .btn-brake {
-            border-top: 4px solid var(--accent-red);
-            grid-column: 1 / -1; /* Makes the brake button span full width */
-            background: rgba(239, 68, 68, 0.1);
-            color: var(--accent-red);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            border-top: 4px solid var(--accent-red);
+        /* File Upload Button Styles */
+        .upload-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
         }
-
-        .btn-brake:active {
-            background: rgba(239, 68, 68, 0.2);
+        .btn-upload {
+            background: rgba(139, 92, 246, 0.1);
+            color: var(--accent-purple);
+            border: 1px dashed var(--accent-purple);
+            padding: 16px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            width: 100%;
         }
     </style>
 </head>
@@ -194,6 +121,13 @@
             <div id="status-dot" class="status-indicator"></div>
             <span id="connection-status-text">CONNECTING</span>
         </div>
+    </div>
+
+    <div class="upload-container">
+        <input type="file" id="profile-upload" accept=".streamDeckProfile,.zip" style="display: none;">
+        <button class="btn btn-upload" onclick="document.getElementById('profile-upload').click()">
+            📥 Import .streamDeckProfile
+        </button>
     </div>
 
     <div class="telemetry-grid">
@@ -210,15 +144,9 @@
     </div>
 
     <div class="controls">
-        <button class="btn btn-gear" onclick="toggleGear()">
-            <span>LANDING GEAR</span>
-        </button>
-        <button class="btn btn-lights" onclick="sendCommand('LIGHTS_TOGGLE')">
-            <span>NAV/STROBE</span>
-        </button>
-        <button class="btn btn-brake" onclick="sendCommand('PARKING_BRAKE')">
-            <span>PARKING BRAKE</span>
-        </button>
+        <button class="btn btn-gear" onclick="toggleGear()"><span>LANDING GEAR</span></button>
+        <button class="btn btn-lights" onclick="sendCommand('LIGHTS_TOGGLE')"><span>NAV/STROBE</span></button>
+        <button class="btn btn-brake" onclick="sendCommand('PARKING_BRAKE')"><span>PARKING BRAKE</span></button>
     </div>
 
     <script>
@@ -229,46 +157,40 @@
         let ws;
         let gearIsDown = true; 
 
-        function updateStatus(state) {
-            statusDot.className = 'status-indicator'; // Reset classes
+        // --- CLOUD CONNECTION LOGIC ---
+        function updateStatus(state, customText = null) {
+            statusDot.className = 'status-indicator'; 
             if (state === 'connected') {
-                statusText.innerText = 'DATA LINK ESTABLISHED';
+                statusText.innerText = customText || 'DATA LINK ESTABLISHED';
                 statusDot.classList.add('connected');
             } else if (state === 'disconnected') {
-                statusText.innerText = 'DATA LINK LOST';
+                statusText.innerText = customText || 'DATA LINK LOST';
                 statusDot.classList.add('disconnected');
             } else {
-                statusText.innerText = 'CONNECTING...';
+                statusText.innerText = customText || 'CONNECTING...';
             }
         }
 
         function connect() {
             updateStatus('connecting');
             ws = new WebSocket('wss://msfs-relay.onrender.com');
-
             ws.onopen = () => updateStatus('connected');
-
             ws.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
-                    // Use padStart to keep the numbers aligned beautifully
                     if (data.altitude !== undefined) altDiv.innerText = Math.round(data.altitude).toString().padStart(4, '0');
                     if (data.airspeed !== undefined) spdDiv.innerText = Math.round(data.airspeed).toString().padStart(3, '0');
                 } catch (e) {}
             };
-
             ws.onclose = () => {
                 updateStatus('disconnected');
-                altDiv.innerText = '---';
-                spdDiv.innerText = '---';
+                altDiv.innerText = '---'; spdDiv.innerText = '---';
                 setTimeout(connect, 3000);
             };
         }
 
         function sendCommand(typeCode) {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ type: typeCode }));
-            }
+            if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: typeCode }));
         }
 
         function toggleGear() {
@@ -278,6 +200,51 @@
             }
         }
 
+        // --- NEW: VIRTUAL ENGINE / PROFILE IMPORTER LOGIC ---
+        document.getElementById('profile-upload').addEventListener('change', async function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            console.log(`>>> ATTEMPTING TO UNZIP: ${file.name} <<<`);
+            updateStatus('connecting', 'UNZIPPING PROFILE...');
+
+            try {
+                // 1. Crack open the ZIP file in browser memory
+                const zip = await JSZip.loadAsync(file);
+                console.log("ZIP Contents:", Object.keys(zip.files));
+
+                // 2. Stream Deck profiles usually hide their data in a manifest.json file
+                // We use a regex search to find it no matter what subfolder it is in
+                const manifestFiles = zip.file(/manifest\.json$/i);
+                
+                if (manifestFiles.length === 0) {
+                    throw new Error("No manifest.json found inside this profile.");
+                }
+
+                // 3. Extract the JSON text and parse it into a Javascript Object
+                const manifestContent = await manifestFiles[0].async("string");
+                const manifestData = JSON.parse(manifestContent);
+
+                // 4. Print the payload to the console for inspection!
+                console.log(">>> MANIFEST SUCCESSFULLY DECODED <<<");
+                console.log("Profile Name:", manifestData.Name || "Custom Profile");
+                console.log("Full Data Payload:", manifestData);
+
+                // Briefly flash a success message before returning to network status
+                let profileName = manifestData.Name ? manifestData.Name.toUpperCase() : "PROFILE";
+                updateStatus('connected', `LOADED: ${profileName}`);
+                setTimeout(() => updateStatus(ws && ws.readyState === 1 ? 'connected' : 'disconnected'), 3000);
+
+            } catch (error) {
+                console.error(">>> UNZIP ERROR: ", error);
+                updateStatus('disconnected', 'UPLOAD FAILED (SEE CONSOLE)');
+            }
+            
+            // Reset the input so you can upload the same file again if needed
+            event.target.value = ''; 
+        });
+
+        // Boot up
         connect();
     </script>
 </body>

@@ -76,17 +76,46 @@
             filter: drop-shadow(0px 0px 8px rgba(255, 255, 255, 0.8));
         }
         
-        /* GAUGE & ROTARY Fly Mode */
-        body.fly-mode .grid-cell.type-gauge, body.fly-mode .grid-cell.type-rotary { 
+        /* ROTARY Fly Mode */
+        body.fly-mode .grid-cell.type-rotary { 
+            background-color: var(--bg-panel); border-top: 4px solid var(--accent-yellow); justify-content: space-evenly;
+        }
+
+        /* DIGITAL GAUGES (Altitude, OAT) */
+        body.fly-mode .grid-cell.type-gauge-digital { 
             background-color: var(--bg-panel); border-top: 4px solid var(--accent-blue); justify-content: space-evenly;
+        }
+
+        /* VISUAL DIAL GAUGES (RPM, Speed, VS, Fuel, Flaps) */
+        body.fly-mode .grid-cell.type-gauge-dial { 
+            background-color: var(--bg-panel); border-top: 4px solid var(--accent-blue); justify-content: center;
         }
 
         .cell-icon { font-size: 24px; margin-bottom: 2px; transition: filter 0.2s;}
         .cell-title { font-size: 10px; font-weight: bold; text-align: center; padding: 0 4px; color: var(--text-muted); text-transform: uppercase;}
         
         .cell-value { font-family: 'Roboto Mono', monospace; font-size: 20px; font-weight: 700; color: var(--text-main); display: none;}
-        body.fly-mode .grid-cell.type-gauge .cell-value { display: block; }
-        body.fly-mode .grid-cell.type-gauge .cell-icon { display: none; }
+        body.fly-mode .grid-cell.type-gauge-digital .cell-value { display: block; }
+        body.fly-mode .grid-cell.type-gauge-digital .cell-icon { display: none; }
+
+        /* THE NEW VISUAL DIAL CSS */
+        .visual-dial-container {
+            display: none; position: relative; width: 80px; height: 80px;
+            border-radius: 50%; border: 2px solid #333; background: radial-gradient(circle, #27272a 0%, #111 100%);
+            align-items: center; justify-content: center; flex-direction: column; margin-top: 4px;
+        }
+        body.fly-mode .grid-cell.type-gauge-dial .visual-dial-container { display: flex; }
+        body.fly-mode .grid-cell.type-gauge-dial .cell-icon { display: none; }
+        
+        .dial-value { font-family: 'Roboto Mono', monospace; font-size: 14px; font-weight: 700; color: white; z-index: 2; margin-top: 25px;}
+        .dial-unit { font-size: 8px; color: var(--text-muted); z-index: 2;}
+        .dial-needle {
+            position: absolute; width: 2px; height: 38px; background: var(--accent-red);
+            bottom: 50%; left: calc(50% - 1px); transform-origin: bottom center;
+            transform: rotate(-135deg); transition: transform 0.15s ease-out; z-index: 1;
+            box-shadow: 0 0 4px rgba(239, 68, 68, 0.5);
+        }
+        .dial-center { position: absolute; width: 10px; height: 10px; background: #eee; border-radius: 50%; z-index: 3; box-shadow: 0 2px 4px rgba(0,0,0,0.5);}
 
         /* ROTARY STYLES */
         .rotary-container { 
@@ -95,13 +124,13 @@
         }
         body.fly-mode .grid-cell.type-rotary .rotary-container { display: flex; }
         body.fly-mode .grid-cell.type-rotary .cell-icon { display: none; }
-        body.fly-mode .grid-cell.type-rotary .cell-value { display: block; font-size: 16px; color: var(--accent-blue); margin: 0;}
+        body.fly-mode .grid-cell.type-rotary .cell-value { display: block; font-size: 16px; color: var(--accent-yellow); margin: 0;}
         
         .rotary-btn { 
             background: #333; color: white; border: none; border-radius: 6px; width: 28px; height: 28px; 
             font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;
         }
-        .rotary-btn:active { background: var(--accent-blue); transform: scale(0.9); }
+        .rotary-btn:active { background: var(--accent-yellow); transform: scale(0.9); }
 
         .delete-btn { 
             position: absolute; top: -8px; right: -8px; background: var(--accent-red); color: white;
@@ -176,7 +205,7 @@
 
 
         // ==========================================
-        // 2. THE MEGA DICTIONARY
+        // 2. THE MEGA DICTIONARY (Updated with Dial limits)
         // ==========================================
         const DICTIONARY = {
             // --- FLIGHT CONTROLS ---
@@ -193,10 +222,7 @@
             // --- LIGHTING ---
             "lights_nav": { name: "Nav Lights", icon: "🟢", type: "button", command: "TOGGLE_NAV_LIGHTS", stateKey: "nav_light_state" },
             "lights_beacon": { name: "Beacon", icon: "🚨", type: "button", command: "TOGGLE_BEACON_LIGHTS", stateKey: "beacon_state" },
-            
-            // THE FIX: MSFS uses "STROBES_TOGGLE", not "TOGGLE_STROBE_LIGHTS"
             "lights_strobe": { name: "Strobe", icon: "✨", type: "button", command: "STROBES_TOGGLE", stateKey: "strobe_state" },
-            
             "lights_taxi": { name: "Taxi Lights", icon: "🚕", type: "button", command: "TOGGLE_TAXI_LIGHTS", stateKey: "taxi_state" },
             "lights_landing": { name: "Landing", icon: "🔦", type: "button", command: "LANDING_LIGHTS_TOGGLE", stateKey: "landing_state" },
             
@@ -209,14 +235,16 @@
             "ap_vs_hold": { name: "VS Hold", icon: "📈", type: "button", command: "AP_PANEL_VS_HOLD", stateKey: "ap_vs_state" },
             "ap_apr_hold": { name: "Approach", icon: "🛬", type: "button", command: "AP_APR_HOLD", stateKey: "ap_apr_state" },
             
-            // --- GAUGES ---
-            "gauge_rpm": { name: "Engine RPM", icon: "⏱️", type: "gauge", dataKey: "rpm", unit: "" },
-            "gauge_flaps": { name: "Flaps %", icon: "📐", type: "gauge", dataKey: "flaps_pct", unit: "%" },
-            "gauge_fuel": { name: "Fuel Qty", icon: "⛽", type: "gauge", dataKey: "fuel_pct", unit: " Gal" },
-            "gauge_alt": { name: "Altitude", icon: "⛰️", type: "gauge", dataKey: "altitude", unit: " FT" },
-            "gauge_spd": { name: "Airspeed", icon: "💨", type: "gauge", dataKey: "airspeed", unit: " KTS" },
-            "gauge_vs": { name: "Vert Speed", icon: "↕️", type: "gauge", dataKey: "vs", unit: " FPM" },
-            "gauge_oat": { name: "Outside Temp", icon: "🌡️", type: "gauge", dataKey: "oat", unit: "°C" },
+            // --- GAUGES (Upgraded to Dials where appropriate) ---
+            "gauge_rpm": { name: "Engine RPM", icon: "⏱️", type: "gauge-dial", dataKey: "rpm", unit: "RPM", min: 0, max: 2500 },
+            "gauge_spd": { name: "Airspeed", icon: "💨", type: "gauge-dial", dataKey: "airspeed", unit: "KTS", min: 0, max: 200 },
+            "gauge_vs": { name: "Vert Speed", icon: "↕️", type: "gauge-dial", dataKey: "vs", unit: "FPM", min: -2000, max: 2000 },
+            "gauge_flaps": { name: "Flaps %", icon: "📐", type: "gauge-dial", dataKey: "flaps_pct", unit: "%", min: 0, max: 100 },
+            "gauge_fuel": { name: "Fuel Qty", icon: "⛽", type: "gauge-dial", dataKey: "fuel_pct", unit: "GAL", min: 0, max: 335 },
+            
+            // These remain digital blocks because Altitude text spins too fast for a tiny dial to look good
+            "gauge_alt": { name: "Altitude", icon: "⛰️", type: "gauge-digital", dataKey: "altitude", unit: " FT" },
+            "gauge_oat": { name: "Outside Temp", icon: "🌡️", type: "gauge-digital", dataKey: "oat", unit: "°C" },
 
             // --- ROTARIES ---
             "rotary_hdg": { name: "AP Heading", icon: "🧭", type: "rotary", dataKey: "ap_hdg", unit: "°", cmdDec: "HEADING_BUG_DEC", cmdInc: "HEADING_BUG_INC" },
@@ -275,14 +303,31 @@
                     if (!dictItem) return;
 
                     cell.className = `grid-cell filled type-${dictItem.type}`;
-                    let valueId = (dictItem.type === 'gauge' || dictItem.type === 'rotary') ? `id="gauge-${index}"` : '';
+                    let valueId = `id="data-${index}"`;
 
                     let innerHTML = `
                         <div class="cell-icon">${dictItem.icon}</div>
                         <div class="cell-title">${dictItem.name}</div>
-                        <div class="cell-value" ${valueId}>---${dictItem.unit || ''}</div>
                     `;
 
+                    // Render Standard Digital Gauge Block
+                    if (dictItem.type === 'gauge-digital') {
+                        innerHTML += `<div class="cell-value" ${valueId}>---${dictItem.unit || ''}</div>`;
+                    }
+
+                    // Render New Visual Dial Block
+                    if (dictItem.type === 'gauge-dial') {
+                        innerHTML += `
+                            <div class="visual-dial-container">
+                                <div class="dial-needle" id="needle-${index}"></div>
+                                <div class="dial-center"></div>
+                                <div class="dial-value" ${valueId}>---</div>
+                                <div class="dial-unit">${dictItem.unit}</div>
+                            </div>
+                        `;
+                    }
+
+                    // Render Rotary Block
                     if (dictItem.type === 'rotary') {
                         innerHTML += `
                             <div class="rotary-container">
@@ -341,13 +386,13 @@
                 item.className = 'component-item';
                 
                 let tagColor = 'var(--accent-green)'; 
-                if (data.type === 'gauge') tagColor = 'var(--accent-blue)';
+                if (data.type.includes('gauge')) tagColor = 'var(--accent-blue)';
                 if (data.type === 'rotary') tagColor = 'var(--accent-yellow)';
 
                 item.innerHTML = `
                     <span style="font-size: 20px;">${data.icon}</span> 
                     <span>${data.name}</span>
-                    <span class="component-tag" style="color: ${tagColor}">${data.type.toUpperCase()}</span>
+                    <span class="component-tag" style="color: ${tagColor}">${data.type.split('-')[0].toUpperCase()}</span>
                 `;
                 item.onclick = () => assignCell(id);
                 list.appendChild(item);
@@ -405,16 +450,37 @@
                             if (cellData && cellData.id) {
                                 const dictItem = DICTIONARY[cellData.id];
                                 
-                                if (dictItem && (dictItem.type === 'gauge' || dictItem.type === 'rotary')) {
+                                // UPDATE GAUGES AND ROTARIES
+                                if (dictItem && (dictItem.type.includes('gauge') || dictItem.type === 'rotary')) {
                                     const simValue = data[dictItem.dataKey];
                                     if (simValue !== undefined) {
-                                        const valueDivs = document.querySelectorAll(`#gauge-${index}`);
+                                        
+                                        // 1. Update the Text Numbers
+                                        const valueDivs = document.querySelectorAll(`#data-${index}`);
                                         valueDivs.forEach(div => {
-                                            div.innerText = Math.round(simValue) + (dictItem.unit || '');
+                                            // If it's a dial, the unit is handled by a separate div. Otherwise append it.
+                                            let suffix = dictItem.type === 'gauge-dial' ? '' : (dictItem.unit || '');
+                                            div.innerText = Math.round(simValue) + suffix;
                                         });
+
+                                        // 2. Rotate the Needle (if it's a dial)
+                                        if (dictItem.type === 'gauge-dial') {
+                                            const needle = document.getElementById(`needle-${index}`);
+                                            if (needle) {
+                                                // Clamp the value between the Min and Max bounds
+                                                let clampedVal = Math.max(dictItem.min, Math.min(dictItem.max, simValue));
+                                                
+                                                // Map the clamped value to a 270-degree arc (-135 to +135)
+                                                let percent = (clampedVal - dictItem.min) / (dictItem.max - dictItem.min);
+                                                let degrees = -135 + (percent * 270);
+                                                
+                                                needle.style.transform = `rotate(${degrees}deg)`;
+                                            }
+                                        }
                                     }
                                 }
                                 
+                                // UPDATE BUTTON STATES
                                 if (dictItem && dictItem.type === 'button' && dictItem.stateKey) {
                                     const stateValue = data[dictItem.stateKey];
                                     if (stateValue !== undefined) {

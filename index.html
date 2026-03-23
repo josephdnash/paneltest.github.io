@@ -170,7 +170,6 @@
             measurementId: "G-0VN39QBKR1"
         };
 
-        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
         const layoutRef = database.ref('efb_layout');
@@ -203,22 +202,36 @@
         // ==========================================
         let isEditMode = true;
         let selectedCellIndex = null;
-        let gridState = new Array(24).fill(null); // Default empty grid
+        let gridState = new Array(24).fill(""); 
 
         // Listen for real-time changes from the Cloud!
         layoutRef.on('value', (snapshot) => {
             const data = snapshot.val();
+            
             if (data) {
-                gridState = data;
+                // THE FIX: Force whatever Firebase sends us back into a strict 24-slot Array
+                let safeArray = new Array(24).fill("");
+                
+                Object.keys(data).forEach(key => {
+                    let index = parseInt(key);
+                    if (!isNaN(index) && index >= 0 && index < 24) {
+                        safeArray[index] = data[key];
+                    }
+                });
+                
+                gridState = safeArray;
             } else {
-                // If the database is completely empty (first run), save an empty grid to it
                 saveLayout();
             }
             renderGrid();
+        }, (error) => {
+            console.error("FIREBASE ERROR:", error);
+            document.getElementById('connection-status-text').innerText = "CLOUD DB ERROR";
+            document.getElementById('status-dot').className = 'status-indicator disconnected';
+            renderGrid(); 
         });
 
         function saveLayout() {
-            // Push changes to Firebase instead of local browser storage
             layoutRef.set(gridState);
         }
 
@@ -233,7 +246,7 @@
                 const cell = document.createElement('div');
                 cell.id = `cell-${index}`;
                 
-                if (cellData) {
+                if (cellData && cellData.id) {
                     const dictItem = DICTIONARY[cellData.id];
                     if (!dictItem) return;
 
@@ -326,15 +339,15 @@
         function assignCell(componentId) {
             if (selectedCellIndex !== null) {
                 gridState[selectedCellIndex] = { id: componentId };
-                saveLayout(); // Pushes to cloud
+                saveLayout(); 
                 closeModal();
             }
         }
 
         function clearCell(event, index) {
             event.stopPropagation(); 
-            gridState[index] = null;
-            saveLayout(); // Pushes to cloud
+            gridState[index] = ""; 
+            saveLayout(); 
         }
 
         // ==========================================
@@ -365,7 +378,7 @@
                     
                     if (!isEditMode) {
                         gridState.forEach((cellData, index) => {
-                            if (cellData) {
+                            if (cellData && cellData.id) {
                                 const dictItem = DICTIONARY[cellData.id];
                                 
                                 if (dictItem && (dictItem.type === 'gauge' || dictItem.type === 'rotary')) {

@@ -245,7 +245,6 @@
         let currentPage = 0;
         let currentFolderName = "";
         
-        // 10 pages deep (Page 0 is Home, 1-9 are auto-assigned folders)
         let pagesData = new Array(10).fill(null).map(() => new Array(24).fill(""));
 
         layoutRef.on('value', (snapshot) => {
@@ -271,7 +270,6 @@
             layoutRef.set(pagesData);
         }
 
-        // --- DYNAMIC BREADCRUMB NAVIGATION ---
         function changePage(pageIndex, folderName = "") {
             currentPage = pageIndex;
             currentFolderName = folderName;
@@ -303,7 +301,6 @@
                     cell.className = `grid-cell filled type-${dictItem.type}`;
                     let valueId = `id="data-${index}"`;
                     
-                    // Prioritize Custom Label, fallback to Dictionary Name
                     let displayName = cellData.label || dictItem.name;
 
                     let innerHTML = `
@@ -332,7 +329,6 @@
                         if (dictItem.type === 'button') {
                             cell.onclick = () => sendCommand(dictItem.command);
                         } else if (dictItem.type === 'nav') {
-                            // Pass both the target page AND the folder name so the breadcrumb updates!
                             cell.onclick = () => changePage(cellData.targetPage || 0, cellData.label || "");
                         } else if (dictItem.type === 'rotary') {
                             cell.querySelector('.dec-btn').onclick = (e) => { e.stopPropagation(); sendCommand(dictItem.cmdDec); };
@@ -400,23 +396,18 @@
             document.getElementById('component-modal').style.display = 'none';
         }
 
-        // --- SMART ASSIGNMENT LOGIC ---
         function assignCell(componentId) {
             if (selectedCellIndex === null) return;
             
             const dictItem = DICTIONARY[componentId];
-            
-            // Default to empty strings to keep Firebase happy!
             let label = "";
             let targetPage = "";
 
             if (componentId === "nav_folder") {
-                // 1. Ask for the Name
                 let promptedLabel = prompt("Enter Folder Name (e.g. LIGHTING):", "NEW FOLDER");
-                if (!promptedLabel) return; // User hit cancel
+                if (!promptedLabel) return; 
                 label = promptedLabel;
 
-                // 2. Secretly find the next completely empty page (Pages 1 through 9)
                 let foundPage = -1;
                 for (let i = 1; i < 10; i++) {
                     let isEmpty = pagesData[i].every(cell => cell === "" || cell === null);
@@ -432,19 +423,15 @@
                 }
                 
                 targetPage = foundPage;
-                
-                // 3. Automatically drop a "Back to Home" button into slot 0 of the new folder safely
                 pagesData[targetPage][0] = { id: "nav_back", label: "Back", targetPage: 0 };
 
             } else if (componentId === "nav_back") {
-                // Manually placed back buttons always route to 0
                 targetPage = 0; 
                 label = "Back";
             } else if (dictItem.targetPage !== undefined) {
                 targetPage = dictItem.targetPage;
             }
 
-            // Save the newly assigned button to the CURRENT page (No undefined values!)
             pagesData[currentPage][selectedCellIndex] = { 
                 id: componentId, 
                 label: label, 
@@ -456,8 +443,26 @@
             renderGrid();
         }
 
+        // --- NEW: CASCADING DELETE LOGIC ---
         function clearCell(event, index) {
             event.stopPropagation(); 
+            
+            const cellData = pagesData[currentPage][index];
+            if (cellData && cellData.id) {
+                const dictItem = DICTIONARY[cellData.id];
+                
+                // If they are trying to delete a Folder (and it's not the Back button)
+                if (dictItem && cellData.id === "nav_folder" && cellData.targetPage) {
+                    const confirmDelete = confirm(`Are you sure you want to delete the folder "${cellData.label}" and permanently erase all of the buttons inside it?`);
+                    
+                    if (!confirmDelete) return; // User chickened out!
+                    
+                    // Wipe the target sub-page clean in the database so it can be recycled later
+                    pagesData[cellData.targetPage] = new Array(24).fill("");
+                }
+            }
+
+            // Erase the button from the current page
             pagesData[currentPage][index] = ""; 
             saveLayout(); 
             renderGrid();
@@ -490,7 +495,6 @@
                     const data = JSON.parse(event.data);
                     
                     if (!isEditMode) {
-                        // WE ONLY UPDATE DOM ELEMENTS ON THE ACTIVE PAGE
                         pagesData[currentPage].forEach((cellData, index) => {
                             if (cellData && cellData.id) {
                                 const dictItem = DICTIONARY[cellData.id];

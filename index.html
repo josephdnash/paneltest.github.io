@@ -160,7 +160,6 @@
         // 1. FIREBASE CONFIGURATION
         // ==========================================
         const firebaseConfig = {
-            // String trick to bypass automated GitHub token scanners
             apiKey: "AIzaSyD7zsSlVfR" + "uTevKoU-2g3Xrkz5ZPLaILyQ",
             authDomain: "msfs-panel.firebaseapp.com",
             databaseURL: "https://msfs-panel-default-rtdb.firebaseio.com",
@@ -194,7 +193,10 @@
             // --- LIGHTING ---
             "lights_nav": { name: "Nav Lights", icon: "🟢", type: "button", command: "TOGGLE_NAV_LIGHTS", stateKey: "nav_light_state" },
             "lights_beacon": { name: "Beacon", icon: "🚨", type: "button", command: "TOGGLE_BEACON_LIGHTS", stateKey: "beacon_state" },
-            "lights_strobe": { name: "Strobe", icon: "✨", type: "button", command: "TOGGLE_STROBE_LIGHTS", stateKey: "strobe_state" },
+            
+            // THE FIX: MSFS uses "STROBES_TOGGLE", not "TOGGLE_STROBE_LIGHTS"
+            "lights_strobe": { name: "Strobe", icon: "✨", type: "button", command: "STROBES_TOGGLE", stateKey: "strobe_state" },
+            
             "lights_taxi": { name: "Taxi Lights", icon: "🚕", type: "button", command: "TOGGLE_TAXI_LIGHTS", stateKey: "taxi_state" },
             "lights_landing": { name: "Landing", icon: "🔦", type: "button", command: "LANDING_LIGHTS_TOGGLE", stateKey: "landing_state" },
             
@@ -230,12 +232,10 @@
         let selectedCellIndex = null;
         let gridState = new Array(24).fill(""); 
 
-        // Listen for real-time changes from the Cloud
         layoutRef.on('value', (snapshot) => {
             const data = snapshot.val();
             
             if (data) {
-                // Ensure Firebase gives us a reliable 24-slot Array
                 let safeArray = new Array(24).fill("");
                 Object.keys(data).forEach(key => {
                     let index = parseInt(key);

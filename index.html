@@ -257,11 +257,19 @@
             // --- RADIOS & COMMS ---
             "radio_com1_swap": { category: "Radios", name: "COM 1 Swap", icon: "📻", type: "button", command: "COM_STBY_RADIO_SWAP" },
             "radio_nav1_swap": { category: "Radios", name: "NAV 1 Swap", icon: "📡", type: "button", command: "NAV1_RADIO_SWAP" },
-            // Note the new "decimals: 3" property so frequencies render perfectly!
+            "radio_com2_swap": { category: "Radios", name: "COM 2 Swap", icon: "📻", type: "button", command: "COM2_RADIO_SWAP" },
+            "radio_nav2_swap": { category: "Radios", name: "NAV 2 Swap", icon: "📡", type: "button", command: "NAV2_RADIO_SWAP" },
+            
             "gauge_com1_act": { category: "Radios", name: "COM 1 ACT", icon: "🔊", type: "gauge", dataKey: "com1_act", unit: "", decimals: 3 },
             "gauge_com1_stby": { category: "Radios", name: "COM 1 STBY", icon: "🔈", type: "gauge", dataKey: "com1_stby", unit: "", decimals: 3 },
             "gauge_nav1_act": { category: "Radios", name: "NAV 1 ACT", icon: "📍", type: "gauge", dataKey: "nav1_act", unit: "", decimals: 2 },
             "gauge_nav1_stby": { category: "Radios", name: "NAV 1 STBY", icon: "🗺️", type: "gauge", dataKey: "nav1_stby", unit: "", decimals: 2 },
+            
+            "gauge_com2_act": { category: "Radios", name: "COM 2 ACT", icon: "🔊", type: "gauge", dataKey: "com2_act", unit: "", decimals: 3 },
+            "gauge_com2_stby": { category: "Radios", name: "COM 2 STBY", icon: "🔈", type: "gauge", dataKey: "com2_stby", unit: "", decimals: 3 },
+            "gauge_nav2_act": { category: "Radios", name: "NAV 2 ACT", icon: "📍", type: "gauge", dataKey: "nav2_act", unit: "", decimals: 2 },
+            "gauge_nav2_stby": { category: "Radios", name: "NAV 2 STBY", icon: "🗺️", type: "gauge", dataKey: "nav2_stby", unit: "", decimals: 2 },
+
             "transponder_ident": { category: "Radios", name: "XPNDR Ident", icon: "🛜", type: "button", command: "XPNDR_IDENT_ON" },
 
             // --- FLIGHT CONTROLS & TRIM ---
@@ -271,7 +279,8 @@
             "flaps_down": { category: "Controls", name: "Flaps Down", icon: "🔽", type: "button", command: "FLAPS_INCR" },
             "spoilers_arm": { category: "Controls", name: "Arm Spoilers", icon: "🛡️", type: "button", command: "SPOILERS_ARM_TOGGLE", stateKey: "spoilers_arm_state" },
             "spoilers_toggle": { category: "Controls", name: "Toggle Spoilers", icon: "🌪️", type: "button", command: "SPOILERS_TOGGLE" },
-            "rotary_trim_elev": { category: "Controls", name: "Elevator Trim", icon: "↕️", type: "rotary", dataKey: "trim_elev", unit: "%", cmdDec: "ELEV_TRIM_UP", cmdInc: "ELEV_TRIM_DN" },
+            
+            "rotary_trim_elev": { category: "Controls", name: "Elev Trim", icon: "↕️", type: "rotary", dataKey: "trim_elev", unit: "%", cmdDec: "ELEV_TRIM_UP", cmdInc: "ELEV_TRIM_DN" },
             "rotary_trim_rudder": { category: "Controls", name: "Rudder Trim", icon: "↔️", type: "rotary", dataKey: "trim_rudder", unit: "%", cmdDec: "RUDDER_TRIM_LEFT", cmdInc: "RUDDER_TRIM_RIGHT" },
             
             // --- ENGINES & SYSTEMS ---
@@ -310,11 +319,25 @@
             "gauge_vs": { category: "Telemetry", name: "Vert Speed", icon: "↕️", type: "gauge", dataKey: "vs", unit: " FPM" },
             "gauge_oat": { category: "Telemetry", name: "Outside Temp", icon: "🌡️", type: "gauge", dataKey: "oat", unit: "°C" },
             
-            // --- ROTARIES ---
+            // --- ROTARIES (Includes new Radio tuning, OBS, and AP Speed) ---
             "rotary_hdg": { category: "Rotaries", name: "AP Heading", icon: "🧭", type: "rotary", dataKey: "ap_hdg", unit: "°", cmdDec: "HEADING_BUG_DEC", cmdInc: "HEADING_BUG_INC" },
             "rotary_alt": { category: "Rotaries", name: "AP Altitude", icon: "↕️", type: "rotary", dataKey: "ap_alt", unit: " FT", cmdDec: "AP_ALT_VAR_DEC", cmdInc: "AP_ALT_VAR_INC" },
             "rotary_vs": { category: "Rotaries", name: "AP Vert Spd", icon: "📈", type: "rotary", dataKey: "ap_vs", unit: " FPM", cmdDec: "AP_VS_VAR_DEC", cmdInc: "AP_VS_VAR_INC" },
-            "rotary_baro": { category: "Rotaries", name: "Barometer", icon: "☁️", type: "rotary", dataKey: "baro", unit: " hPa", cmdDec: "KOHLSMAN_DEC", cmdInc: "KOHLSMAN_INC" }
+            "rotary_ap_spd": { category: "Rotaries", name: "AP Speed", icon: "💨", type: "rotary", dataKey: "ap_spd", unit: " KTS", cmdDec: "AP_SPD_VAR_DEC", cmdInc: "AP_SPD_VAR_INC" },
+            "rotary_baro": { category: "Rotaries", name: "Barometer", icon: "☁️", type: "rotary", dataKey: "baro", unit: " hPa", cmdDec: "KOHLSMAN_DEC", cmdInc: "KOHLSMAN_INC" },
+            
+            "rotary_obs1": { category: "Rotaries", name: "OBS 1", icon: "🧭", type: "rotary", dataKey: "nav1_obs", unit: "°", cmdDec: "VOR1_OBI_DEC", cmdInc: "VOR1_OBI_INC" },
+            "rotary_obs2": { category: "Rotaries", name: "OBS 2", icon: "🧭", type: "rotary", dataKey: "nav2_obs", unit: "°", cmdDec: "VOR2_OBI_DEC", cmdInc: "VOR2_OBI_INC" },
+            
+            "rotary_com1_whole": { category: "Radios", name: "COM1 Whole", icon: "📻", type: "rotary", dataKey: "com1_stby", unit: "", decimals: 3, cmdDec: "COM_RADIO_WHOLE_DEC", cmdInc: "COM_RADIO_WHOLE_INC" },
+            "rotary_com1_fract": { category: "Radios", name: "COM1 Fract", icon: "📻", type: "rotary", dataKey: "com1_stby", unit: "", decimals: 3, cmdDec: "COM_RADIO_FRACT_DEC", cmdInc: "COM_RADIO_FRACT_INC" },
+            "rotary_nav1_whole": { category: "Radios", name: "NAV1 Whole", icon: "📡", type: "rotary", dataKey: "nav1_stby", unit: "", decimals: 2, cmdDec: "NAV1_RADIO_WHOLE_DEC", cmdInc: "NAV1_RADIO_WHOLE_INC" },
+            "rotary_nav1_fract": { category: "Radios", name: "NAV1 Fract", icon: "📡", type: "rotary", dataKey: "nav1_stby", unit: "", decimals: 2, cmdDec: "NAV1_RADIO_FRACT_DEC", cmdInc: "NAV1_RADIO_FRACT_INC" },
+            
+            "rotary_com2_whole": { category: "Radios", name: "COM2 Whole", icon: "📻", type: "rotary", dataKey: "com2_stby", unit: "", decimals: 3, cmdDec: "COM2_RADIO_WHOLE_DEC", cmdInc: "COM2_RADIO_WHOLE_INC" },
+            "rotary_com2_fract": { category: "Radios", name: "COM2 Fract", icon: "📻", type: "rotary", dataKey: "com2_stby", unit: "", decimals: 3, cmdDec: "COM2_RADIO_FRACT_DEC", cmdInc: "COM2_RADIO_FRACT_INC" },
+            "rotary_nav2_whole": { category: "Radios", name: "NAV2 Whole", icon: "📡", type: "rotary", dataKey: "nav2_stby", unit: "", decimals: 2, cmdDec: "NAV2_RADIO_WHOLE_DEC", cmdInc: "NAV2_RADIO_WHOLE_INC" },
+            "rotary_nav2_fract": { category: "Radios", name: "NAV2 Fract", icon: "📡", type: "rotary", dataKey: "nav2_stby", unit: "", decimals: 2, cmdDec: "NAV2_RADIO_FRACT_DEC", cmdInc: "NAV2_RADIO_FRACT_INC" }
         };
 
         // ==========================================
@@ -707,11 +730,11 @@
                                 
                                 if (dictItem && (dictItem.type === 'gauge' || dictItem.type === 'rotary')) {
                                     const simValue = data[dictItem.dataKey];
-                                    if (simValue !== undefined) {
+                                    if (simValue !== undefined && simValue !== null) {
                                         const valueDivs = document.querySelectorAll(`#data-${index}`);
                                         valueDivs.forEach(div => {
-                                            // MATH FIX: Allow specific decimals for items like Radio Frequencies
-                                            let displayVal = dictItem.decimals !== undefined ? simValue.toFixed(dictItem.decimals) : Math.round(simValue);
+                                            // Handle decimals precisely without crashing on undefined
+                                            let displayVal = dictItem.decimals !== undefined ? Number(simValue).toFixed(dictItem.decimals) : Math.round(simValue);
                                             div.innerText = displayVal + (dictItem.unit || '');
                                         });
                                     }

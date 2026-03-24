@@ -55,7 +55,6 @@
         }
         .auth-box button:hover { background: #0284c7; }
         
-        /* NEW: Google Auth Styles */
         .google-btn { background: white !important; color: #333 !important; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 16px; }
         .google-btn:hover { background: #f4f4f5 !important; }
         .auth-divider { display: flex; align-items: center; margin: 20px 0; color: var(--text-muted); font-size: 12px; font-weight: bold;}
@@ -63,6 +62,8 @@
         .auth-divider span { padding: 0 10px; }
 
         .auth-toggle { color: var(--accent-blue); font-size: 14px; margin-top: 16px; cursor: pointer; text-decoration: underline; font-weight: bold;}
+        .auth-forgot { color: var(--text-muted); font-size: 13px; margin-top: 12px; cursor: pointer; transition: color 0.2s; }
+        .auth-forgot:hover { color: white; }
 
         /* APP UI */
         #app-container { display: none; flex-direction: column; height: 100%; }
@@ -174,6 +175,8 @@
             <button id="auth-action-btn" onclick="handleAuthAction()">LOG IN</button>
             
             <div class="auth-toggle" id="auth-toggle-link" onclick="toggleAuthMode()">Don't have an account? Sign Up</div>
+            
+            <div class="auth-forgot" id="auth-forgot-link" onclick="resetPassword()">Forgot Password?</div>
 
             <div class="auth-divider">
                 <hr><span>OR</span><hr>
@@ -312,6 +315,9 @@
             document.getElementById('auth-title').innerText = isSignUpMode ? "Create Account" : "Log In";
             document.getElementById('auth-action-btn').innerText = isSignUpMode ? "SIGN UP" : "LOG IN";
             document.getElementById('auth-toggle-link').innerText = isSignUpMode ? "Already have an account? Log In" : "Don't have an account? Sign Up";
+            
+            // NEW: Hide "Forgot Password" if they are on the Sign Up screen
+            document.getElementById('auth-forgot-link').style.display = isSignUpMode ? "none" : "block";
         }
 
         function handleAuthAction() {
@@ -334,7 +340,24 @@
             }
         }
 
-        // NEW: GOOGLE SIGN-IN FUNCTION
+        // NEW: PASSWORD RECOVERY FUNCTION
+        function resetPassword() {
+            let email = document.getElementById('auth-email').value.trim();
+            
+            if (!email) {
+                email = prompt("Please enter your account email address to receive a password reset link:");
+                if (!email) return; // User clicked Cancel
+            }
+
+            firebase.auth().sendPasswordResetEmail(email)
+                .then(() => {
+                    alert("Password reset email sent! Please check your inbox (and spam folder).");
+                })
+                .catch((error) => {
+                    alert("Error: " + error.message);
+                });
+        }
+
         function signInWithGoogle() {
             const provider = new firebase.auth.GoogleAuthProvider();
             firebase.auth().signInWithPopup(provider).catch((error) => {

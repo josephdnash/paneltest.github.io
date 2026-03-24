@@ -61,7 +61,13 @@
             background: #27272a; color: white; border: none; padding: 8px 16px; border-radius: 8px;
             font-weight: bold; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; gap: 6px;
         }
-        .mode-toggle.edit-active { background: var(--accent-blue); }
+        
+        /* NEW: Clearer toggle button styling */
+        .mode-toggle.edit-btn { background: #27272a; color: var(--text-muted); }
+        .mode-toggle.edit-btn:hover { background: #3f3f46; color: white; }
+        .mode-toggle.fly-btn { background: var(--accent-blue); color: white; }
+        .mode-toggle.fly-btn:hover { background: #0284c7; }
+        
         .mode-toggle.profile-btn { background: #18181b; border: 1px solid #333; }
         .mode-toggle.profile-btn:hover { background: #27272a; }
 
@@ -140,7 +146,7 @@
         .create-profile-btn { background: var(--accent-green); color: black; font-weight: bold; border: none; padding: 14px; border-radius: 8px; cursor: pointer; margin-top: 8px; font-size: 14px; width: 100%;}
         .duplicate-profile-btn { background: var(--accent-blue); color: white; font-weight: bold; border: none; padding: 14px; border-radius: 8px; cursor: pointer; margin-top: 8px; font-size: 14px; width: 100%; }
 
-        .unpair-btn { background: transparent; color: var(--accent-red); border: 1px solid var(--accent-red); padding: 14px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; margin-top: 8px; width: 100%;}
+        .unpair-btn { background: transparent; color: var(--accent-red); border: 1px solid var(--accent-red); padding: 14px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; margin-top: 16px; width: 100%;}
         .unpair-btn:hover { background: rgba(239, 68, 68, 0.1); }
     </style>
 </head>
@@ -165,12 +171,25 @@
                 </div>
             </div>
             <div class="controls-row">
+                <button class="mode-toggle profile-btn" onclick="openSettingsModal()">⚙️ SETTINGS</button>
                 <button class="mode-toggle profile-btn" onclick="openProfileModal()">🛩️ <span id="ui-current-profile">Default</span></button>
-                <button id="btn-mode" class="mode-toggle edit-active" onclick="toggleMode()">✏️ EDIT MODE</button>
+                
+                <button id="btn-mode" class="mode-toggle fly-btn" onclick="toggleMode()">🚀 GO TO FLY MODE</button>
             </div>
         </div>
 
         <div id="builder-grid"></div>
+    </div>
+
+    <div id="settings-modal" class="overlay">
+        <div class="modal-content small">
+            <h2 style="margin-top: 0; color: white;">Settings</h2>
+            <div style="flex-grow: 1;">
+                <p style="color: var(--text-muted); font-size: 14px; line-height: 1.5;">Manage your connection. Unpairing will disconnect this device from your simulator's layouts.</p>
+                <button class="unpair-btn" onclick="unpairDevice()">UNPAIR THIS DEVICE</button>
+            </div>
+            <button class="cancel-btn" style="margin-top: 16px;" onclick="closeSettingsModal()">Close</button>
+        </div>
     </div>
 
     <div id="profile-modal" class="overlay">
@@ -179,7 +198,6 @@
             <div id="profile-list" style="max-height: 250px; overflow-y: auto;"></div>
             <button class="create-profile-btn" onclick="createNewProfile()">+ CREATE NEW LAYOUT</button>
             <button class="duplicate-profile-btn" onclick="duplicateProfile()">👯 DUPLICATE CURRENT</button>
-            <button class="unpair-btn" onclick="unpairDevice()">UNPAIR THIS DEVICE</button>
             <button class="cancel-btn" style="margin-top: 8px;" onclick="closeProfileModal()">Close</button>
         </div>
     </div>
@@ -203,7 +221,7 @@
         // 1. STATE VARIABLES & CONFIGURATION
         // ==========================================
         let USER_PIN = localStorage.getItem("efb_pairing_pin");
-        let isEditMode = true;
+        let isEditMode = true; // Starts in Edit Mode
         let selectedCellIndex = null;
         let draggedCellIndex = null; 
         let currentPage = 0;
@@ -334,6 +352,10 @@
                 location.reload(); 
             }
         }
+
+        // --- NEW: Settings Modal Logic ---
+        function openSettingsModal() { document.getElementById('settings-modal').style.display = 'flex'; }
+        function closeSettingsModal() { document.getElementById('settings-modal').style.display = 'none'; }
 
         function initializeSystem() {
             const firebaseConfig = {
@@ -559,10 +581,21 @@
             saveLayout(); renderGrid();
         }
 
+        // --- NEW: UX Update for Mode Toggle Button ---
         function toggleMode() {
             isEditMode = !isEditMode;
             document.body.className = isEditMode ? 'edit-mode' : 'fly-mode';
-            document.getElementById('btn-mode').innerHTML = isEditMode ? "✏️ EDIT MODE" : "🚀 FLY MODE";
+            
+            const btn = document.getElementById('btn-mode');
+            if (isEditMode) {
+                // If we are IN Edit Mode, the button should prompt to go to Fly Mode
+                btn.innerHTML = "🚀 GO TO FLY MODE";
+                btn.className = "mode-toggle fly-btn";
+            } else {
+                // If we are IN Fly Mode, the button should prompt to go to Edit Mode
+                btn.innerHTML = "✏️ GO TO EDIT MODE";
+                btn.className = "mode-toggle edit-btn";
+            }
             renderGrid();
         }
 
@@ -630,7 +663,6 @@
 
         function closeModal() { document.getElementById('component-modal').style.display = 'none'; }
 
-        // --- THE UPGRADED EDIT CELL LOGIC ---
         function editCell(index) {
             const cellData = pagesData[currentPage][index];
             if (!cellData) return;
@@ -639,7 +671,6 @@
             const dictItem = combinedDict[cellData.id];
             let currentName = cellData.label || (dictItem ? dictItem.name : "BUTTON");
 
-            // Folder or Back Button
             if (cellData.id === "nav_folder" || cellData.id === "nav_back") {
                 let newLabel = prompt("Rename this button:", currentName);
                 if (newLabel !== null && newLabel.trim() !== "") {
@@ -647,7 +678,6 @@
                     saveLayout(); renderGrid();
                 }
             } 
-            // Custom Variable Component
             else if (cellData.customVar) {
                 let action = confirm(`Do you want to EDIT "${currentName}"?\n\n[OK] to Edit Properties\n[Cancel] to Swap for a different component`);
                 if (action) {
@@ -682,7 +712,6 @@
                     openModal(index);
                 }
             } 
-            // Standard Component (Allows Renaming!)
             else {
                 let action = confirm(`Do you want to RENAME "${currentName}"?\n\n[OK] to Rename\n[Cancel] to Swap for a different component`);
                 if (action) {

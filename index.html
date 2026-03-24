@@ -196,36 +196,26 @@
 
     <script>
         // ==========================================
-        // 0. OTP PAIRING BOOTLOADER
+        // 1. STATE VARIABLES & CONFIGURATION
         // ==========================================
         let USER_PIN = localStorage.getItem("efb_pairing_pin");
+        let isEditMode = true;
+        let selectedCellIndex = null;
+        let draggedCellIndex = null; 
+        let currentPage = 0;
+        let currentFolderName = "";
+        let pagesData = new Array(10).fill(null).map(() => new Array(24).fill(""));
+        let currentProfile = "";
+        let availableProfiles = [];
+        let layoutListener = null;
+        let currentModalCategory = "All";
 
-        if (USER_PIN) {
-            document.getElementById('lock-screen').style.display = 'none';
-            document.getElementById('app-container').style.display = 'flex';
-            initializeSystem();
-        }
-
-        function attemptPairing() {
-            const input = document.getElementById('pin-input').value.toUpperCase().trim();
-            if (input.length === 6) {
-                localStorage.setItem("efb_pairing_pin", input);
-                USER_PIN = input;
-                document.getElementById('lock-screen').style.display = 'none';
-                document.getElementById('app-container').style.display = 'flex';
-                initializeSystem();
-            } else {
-                alert("Please enter a valid 6-character Pairing ID.");
-            }
-        }
-
-        function unpairDevice() {
-            localStorage.removeItem("efb_pairing_pin");
-            location.reload(); 
-        }
+        // Firebase Refs
+        let globalActiveProfileRef, profileListRef, allLayoutsRef;
+        let ws; // WebSocket
 
         // ==========================================
-        // 1. FIREBASE & CORE SYSTEM
+        // 2. THE MEGA DICTIONARY
         // ==========================================
         const DICTIONARY = {
             "nav_folder": { category: "EFB Tools", name: "Create Folder", icon: "📁", type: "nav" },
@@ -296,20 +286,26 @@
             "rotary_nav2_fract": { category: "Radios", name: "NAV2 Fract", icon: "📡", type: "rotary", dataKey: "nav2_stby", unit: "", decimals: 2, cmdDec: "NAV2_RADIO_FRACT_DEC", cmdInc: "NAV2_RADIO_FRACT_INC" }
         };
 
-        // UI State Variables
-        let isEditMode = true;
-        let selectedCellIndex = null;
-        let draggedCellIndex = null; 
-        let currentPage = 0;
-        let currentFolderName = "";
-        let pagesData = new Array(10).fill(null).map(() => new Array(24).fill(""));
-        
-        let currentProfile = "";
-        let availableProfiles = [];
-        let layoutListener = null;
+        // ==========================================
+        // 3. FUNCTIONS
+        // ==========================================
+        function attemptPairing() {
+            const input = document.getElementById('pin-input').value.toUpperCase().trim();
+            if (input.length === 6) {
+                localStorage.setItem("efb_pairing_pin", input);
+                USER_PIN = input;
+                document.getElementById('lock-screen').style.display = 'none';
+                document.getElementById('app-container').style.display = 'flex';
+                initializeSystem();
+            } else {
+                alert("Please enter a valid 6-character Pairing ID.");
+            }
+        }
 
-        // Firebase Refs
-        let globalActiveProfileRef, profileListRef, allLayoutsRef;
+        function unpairDevice() {
+            localStorage.removeItem("efb_pairing_pin");
+            location.reload(); 
+        }
 
         function initializeSystem() {
             const firebaseConfig = {
@@ -331,21 +327,18 @@
             profileListRef = userDbRef.child('profile_list');
             allLayoutsRef = userDbRef.child('layouts');
 
-            // THE FIX: Circuit breaker to prevent infinite loops if Firebase rules reject the write.
             let isInitializing = false;
 
             globalActiveProfileRef.on('value', (snap) => {
                 let active = snap.val();
-                
                 if (!active) {
                     active = "Default";
                     if (!isInitializing) {
-                        isInitializing = true; // Engage circuit breaker
-                        globalActiveProfileRef.set(active).catch(e => console.warn("Cloud save rejected (Check Firebase Security Rules). Using local memory."));
+                        isInitializing = true;
+                        globalActiveProfileRef.set(active).catch(e => console.warn("Cloud save rejected. Using local memory."));
                         profileListRef.child("Default").set(true).catch(e => {});
                     }
                 }
-                
                 if (currentProfile !== active) loadProfile(active);
             });
 
@@ -359,11 +352,7 @@
             connect();
         }
 
-        // ==========================================
-        // 2. PROFILE & DB LOGIC
-        // ==========================================
         function loadProfile(profileName) {
-            // THE FIX: Properly detach the listener from the OLD profile before switching!
             if (layoutListener && currentProfile) {
                 allLayoutsRef.child(currentProfile).off('value', layoutListener);
             }
@@ -436,9 +425,6 @@
             renderGrid();
         }
 
-        // ==========================================
-        // 3. UI RENDERING & DRAG/DROP
-        // ==========================================
         function renderGrid() {
             const grid = document.getElementById('builder-grid');
             grid.innerHTML = '';
@@ -524,15 +510,9 @@
             renderGrid();
         }
 
-        // ==========================================
-        // 4. COMPONENT MODAL LOGIC
-        // ==========================================
-        let currentModalCategory = "All";
-
         function openModal(index) {
             selectedCellIndex = index; 
             document.getElementById('modal-search').value = ""; 
-            
             renderModalCategories(); 
             filterModal(); 
             document.getElementById('component-modal').style.display = 'flex';
@@ -649,13 +629,6 @@
             saveLayout(); renderGrid();
         }
 
-        // ==========================================
-        // 5. WEBSOCKET PIPELINE
-        // ==========================================
-        const statusText = document.getElementById('connection-status-text');
-        const statusDot = document.getElementById('status-dot');
-        let ws;
-
         function updateStatus(state) {
             statusDot.className = 'status-indicator'; 
             if (state === 'connected') {
@@ -716,6 +689,15 @@
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ type: "SD_COMMAND", command: cmd }));
             }
+        }
+
+        // ==========================================
+        // 6. EXECUTE BOOTLOADER
+        // ==========================================
+        if (USER_PIN) {
+            document.getElementById('lock-screen').style.display = 'none';
+            document.getElementById('app-container').style.display = 'flex';
+            initializeSystem();
         }
     </script>
 </body>

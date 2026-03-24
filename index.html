@@ -136,7 +136,11 @@
         .profile-item { background: #27272a; padding: 16px; border-radius: 8px; margin-bottom: 8px; cursor: pointer; font-weight: bold; color: white; border: 2px solid transparent; display: flex; justify-content: space-between; }
         .profile-item.active { border-color: var(--accent-blue); background: rgba(14, 165, 233, 0.1); color: var(--accent-blue); }
         .profile-item:hover:not(.active) { background: #3f3f46; }
-        .create-profile-btn { background: var(--accent-green); color: black; font-weight: bold; border: none; padding: 14px; border-radius: 8px; cursor: pointer; margin-top: 16px; font-size: 14px; }
+        
+        .create-profile-btn { background: var(--accent-green); color: black; font-weight: bold; border: none; padding: 14px; border-radius: 8px; cursor: pointer; margin-top: 8px; font-size: 14px; width: 100%;}
+        /* NEW: DUPLICATE BUTTON */
+        .duplicate-profile-btn { background: var(--accent-blue); color: white; font-weight: bold; border: none; padding: 14px; border-radius: 8px; cursor: pointer; margin-top: 8px; font-size: 14px; width: 100%; }
+
         .unpair-btn { background: transparent; color: var(--accent-red); border: 1px solid var(--accent-red); padding: 14px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; margin-top: 8px; width: 100%;}
         .unpair-btn:hover { background: rgba(239, 68, 68, 0.1); }
     </style>
@@ -173,8 +177,9 @@
     <div id="profile-modal" class="overlay">
         <div class="modal-content small">
             <h2 style="margin-top: 0; color: white;">Layout Profiles</h2>
-            <div id="profile-list" style="max-height: 300px; overflow-y: auto;"></div>
+            <div id="profile-list" style="max-height: 250px; overflow-y: auto;"></div>
             <button class="create-profile-btn" onclick="createNewProfile()">+ CREATE NEW LAYOUT</button>
+            <button class="duplicate-profile-btn" onclick="duplicateProfile()">👯 DUPLICATE CURRENT</button>
             <button class="unpair-btn" onclick="unpairDevice()">UNPAIR THIS DEVICE</button>
             <button class="cancel-btn" style="margin-top: 8px;" onclick="closeProfileModal()">Close</button>
         </div>
@@ -210,19 +215,21 @@
         let layoutListener = null;
         let currentModalCategory = "All";
 
+        // NEW: Local array to hold the user's custom library components
+        let myCustomComponents = {};
+
         // Firebase Refs
-        let globalActiveProfileRef, profileListRef, allLayoutsRef;
+        let globalActiveProfileRef, profileListRef, allLayoutsRef, customComponentsRef;
         let ws; // WebSocket
 
         // ==========================================
         // 2. THE MEGA DICTIONARY
         // ==========================================
         const DICTIONARY = {
-            // --- EFB TOOLS ---
             "nav_folder": { category: "EFB Tools", name: "Create Folder", icon: "📁", type: "nav" },
             "nav_back": { category: "EFB Tools", name: "Back to Home", icon: "⬅️", type: "nav", targetPage: 0 },
             
-            // --- NEW: CUSTOM SIMVARS ---
+            // --- CUSTOM SIMVARS ---
             "custom_button": { category: "Custom Variables", name: "Custom Button", icon: "🕹️", type: "button", isCustom: true },
             "custom_gauge": { category: "Custom Variables", name: "Custom Gauge", icon: "🛠️", type: "gauge", isCustom: true },
 
@@ -292,8 +299,27 @@
             "rotary_nav2_fract": { category: "Radios", name: "NAV2 Fract", icon: "📡", type: "rotary", dataKey: "nav2_stby", unit: "", decimals: 2, cmdDec: "NAV2_RADIO_FRACT_DEC", cmdInc: "NAV2_RADIO_FRACT_INC" }
         };
 
+        // NEW: This dynamically merges our global dictionary with your saved custom components!
+        function getCombinedDictionary() {
+            let combined = { ...DICTIONARY };
+            if (myCustomComponents) {
+                Object.keys(myCustomComponents).forEach(key => {
+                    let item = myCustomComponents[key];
+                    combined[key] = {
+                        category: "My Custom Components",
+                        name: item.label + " (" + item.customVar + ")",
+                        icon: item.baseType === "custom_gauge" ? "🛠️" : "🕹️",
+                        type: item.baseType === "custom_gauge" ? "gauge" : "button",
+                        isSavedCustom: true,
+                        ...item
+                    };
+                });
+            }
+            return combined;
+        }
+
         // ==========================================
-        // 3. FUNCTIONS
+        // 3. CORE FUNCTIONS
         // ==========================================
         function attemptPairing() {
             const input = document.getElementById('pin-input').value.toUpperCase().trim();
@@ -332,6 +358,7 @@
             globalActiveProfileRef = userDbRef.child('active_profile');
             profileListRef = userDbRef.child('profile_list');
             allLayoutsRef = userDbRef.child('layouts');
+            customComponentsRef = userDbRef.child('custom_components'); // Link to the custom library!
 
             let isInitializing = false;
 
@@ -353,6 +380,11 @@
                     availableProfiles = Object.keys(snap.val());
                     renderProfileList();
                 }
+            });
+
+            // Listen for any saved custom components!
+            customComponentsRef.on('value', (snap) => {
+                myCustomComponents = snap.val() || {};
             });
 
             connect();
@@ -386,8 +418,6 @@
                     pagesData = new Array(10).fill(null).map(() => new Array(24).fill(""));
                 }
                 renderGrid();
-                
-                // NEW: Whenever we load a new profile, we must tell the Sim what custom variables we need!
                 broadcastCustomVars();
             });
         }
@@ -427,6 +457,19 @@
             }
         }
 
+        // NEW: DUPLICATE PROFILE
+        function duplicateProfile() {
+            let newName = prompt(`Duplicate "${currentProfile}" as (e.g. ${currentProfile} V2):`);
+            if (newName && newName.trim() !== "") {
+                let cleanName = newName.trim();
+                allLayoutsRef.child(cleanName).set(pagesData).then(() => {
+                    profileListRef.child(cleanName).set(true);
+                    globalActiveProfileRef.set(cleanName);
+                    closeProfileModal();
+                }).catch(e => alert("Could not duplicate profile."));
+            }
+        }
+
         function changePage(pageIndex, folderName = "") {
             currentPage = pageIndex; currentFolderName = folderName;
             if (currentPage === 0) document.getElementById('breadcrumb').innerText = "HOME";
@@ -439,12 +482,15 @@
             grid.innerHTML = '';
             let currentGridState = pagesData[currentPage];
 
+            // Get combined dictionary so we can render saved custom variables
+            const combinedDict = getCombinedDictionary();
+
             currentGridState.forEach((cellData, index) => {
                 const cell = document.createElement('div');
                 cell.id = `cell-${index}`;
                 
                 if (cellData && cellData.id) {
-                    const dictItem = DICTIONARY[cellData.id];
+                    const dictItem = combinedDict[cellData.id];
                     if (!dictItem) return;
 
                     cell.className = `grid-cell filled type-${dictItem.type}`;
@@ -454,7 +500,6 @@
                     let innerHTML = `<div class="cell-icon">${dictItem.icon}</div><div class="cell-title">${displayName}</div>`;
 
                     if (dictItem.type === 'gauge') {
-                        // For custom gauges, we append the display unit they typed in during setup
                         let unitText = cellData.customDisplayUnit ? " " + cellData.customDisplayUnit : (dictItem.unit || '');
                         innerHTML += `<div class="cell-value" ${valueId}>---${unitText}</div>`;
                     }
@@ -473,8 +518,7 @@
                     if (!isEditMode) {
                         cell.removeAttribute('draggable');
                         
-                        // NEW: Custom Button click logic
-                        if (cellData.id === "custom_button") {
+                        if (cellData.id === "custom_button" || cellData.baseType === "custom_button") {
                             cell.onclick = () => sendCommand(cellData.customCmd);
                         } else if (dictItem.type === 'button') {
                             cell.onclick = () => sendCommand(dictItem.command);
@@ -541,7 +585,10 @@
             const catContainer = document.getElementById('modal-categories');
             catContainer.innerHTML = '';
             let categories = new Set();
-            for (const key in DICTIONARY) categories.add(DICTIONARY[key].category || "Other");
+            
+            // Generate categories from the Combined Dictionary!
+            const combinedDict = getCombinedDictionary();
+            for (const key in combinedDict) categories.add(combinedDict[key].category || "Other");
             
             let allBtn = document.createElement('button');
             allBtn.className = `cat-btn ${currentModalCategory === "All" ? "active" : ""}`;
@@ -563,7 +610,9 @@
             const list = document.getElementById('component-list');
             list.innerHTML = '';
 
-            for (const [id, data] of Object.entries(DICTIONARY)) {
+            const combinedDict = getCombinedDictionary();
+
+            for (const [id, data] of Object.entries(combinedDict)) {
                 if (currentModalCategory !== "All" && data.category !== currentModalCategory) continue;
                 if (query && !data.name.toLowerCase().includes(query) && !data.category.toLowerCase().includes(query)) continue;
 
@@ -574,11 +623,12 @@
                 if (data.type === 'gauge') tagColor = 'var(--accent-blue)';
                 if (data.type === 'rotary') tagColor = 'var(--accent-yellow)';
                 if (data.type === 'nav') tagColor = 'var(--accent-purple)';
+                if (data.isSavedCustom) tagColor = 'var(--accent-red)'; // Distinguish saved custom items visually
 
                 item.innerHTML = `
                     <span style="font-size: 24px; min-width: 32px; text-align: center;">${data.icon}</span> 
                     <span style="font-size: 16px;">${data.name}</span>
-                    <span class="component-tag" style="color: ${tagColor}">${data.type.toUpperCase()}</span>
+                    <span class="component-tag" style="color: ${tagColor}">${data.isSavedCustom ? "SAVED CUSTOM" : data.type.toUpperCase()}</span>
                 `;
                 item.onclick = () => assignCell(id);
                 list.appendChild(item);
@@ -592,8 +642,10 @@
             const cellData = pagesData[currentPage][index];
             if (!cellData) return;
 
+            const combinedDict = getCombinedDictionary();
+
             if (cellData.id === "nav_folder" || cellData.id === "nav_back") {
-                let currentName = cellData.label || DICTIONARY[cellData.id].name;
+                let currentName = cellData.label || combinedDict[cellData.id].name;
                 let newLabel = prompt("Rename this button:", currentName);
                 if (newLabel !== null && newLabel.trim() !== "") {
                     pagesData[currentPage][index].label = newLabel.trim();
@@ -604,10 +656,11 @@
             }
         }
 
-        // --- NEW: EXTENSIVE CUSTOM COMPONENT LOGIC ---
         function assignCell(componentId) {
             if (selectedCellIndex === null) return;
-            const dictItem = DICTIONARY[componentId];
+            
+            const combinedDict = getCombinedDictionary();
+            const dictItem = combinedDict[componentId];
             let label = ""; let targetPage = "";
 
             if (componentId === "nav_folder") {
@@ -624,14 +677,25 @@
                 
                 targetPage = foundPage;
                 pagesData[targetPage][0] = { id: "nav_back", label: "Back", targetPage: 0 };
-                
                 pagesData[currentPage][selectedCellIndex] = { id: componentId, label: label, targetPage: targetPage };
             
             } else if (componentId === "nav_back") {
                 pagesData[currentPage][selectedCellIndex] = { id: componentId, label: "Back", targetPage: 0 };
             
+            } else if (dictItem.isSavedCustom) {
+                // If they picked an already saved custom item from the library!
+                pagesData[currentPage][selectedCellIndex] = {
+                    id: dictItem.baseType,
+                    label: dictItem.label,
+                    customVar: dictItem.customVar,
+                    customUnit: dictItem.customUnit,
+                    customCmd: dictItem.customCmd,
+                    customDisplayUnit: dictItem.customDisplayUnit,
+                    baseType: dictItem.baseType
+                };
+
             } else if (dictItem.isCustom) {
-                // Walk the user through setting up a custom MSFS variable
+                // If they picked the generic "Custom Button" or "Custom Gauge"
                 let customLabel = prompt("Enter a short label for the grid (e.g. CYL TEMP):", "CUSTOM");
                 if (!customLabel) return;
 
@@ -650,6 +714,20 @@
                     if (!customCmd) return;
                 }
 
+                // ASK: Do you want to save this permanently to your library?
+                let saveToLibrary = confirm("Save this custom component to your library for easy reuse on other profiles?");
+                if (saveToLibrary) {
+                    const customId = "user_custom_" + Date.now();
+                    customComponentsRef.child(customId).set({
+                        baseType: componentId,
+                        label: customLabel.substring(0,12).toUpperCase(),
+                        customVar: simVar.trim().toUpperCase(),
+                        customUnit: customUnit.trim().toLowerCase(),
+                        customCmd: customCmd ? customCmd.trim().toUpperCase() : "",
+                        customDisplayUnit: customDisplayUnit
+                    });
+                }
+
                 pagesData[currentPage][selectedCellIndex] = {
                     id: componentId,
                     label: customLabel.substring(0,12).toUpperCase(),
@@ -664,8 +742,6 @@
             }
 
             saveLayout(); closeModal(); renderGrid();
-            
-            // If they placed a custom item, broadcast the new manifest to the sim!
             broadcastCustomVars();
         }
 
@@ -673,7 +749,8 @@
             event.stopPropagation(); 
             const cellData = pagesData[currentPage][index];
             if (cellData && cellData.id) {
-                const dictItem = DICTIONARY[cellData.id];
+                const combinedDict = getCombinedDictionary();
+                const dictItem = combinedDict[cellData.id];
                 if (dictItem && cellData.id === "nav_folder" && cellData.targetPage) {
                     const confirmDelete = confirm(`Are you sure you want to delete the folder "${cellData.label}" and permanently erase all of the buttons inside it?`);
                     if (!confirmDelete) return; 
@@ -682,18 +759,9 @@
             }
             pagesData[currentPage][index] = ""; 
             saveLayout(); renderGrid();
-            
-            // Re-evaluate what variables the sim needs to track, in case we just deleted the only custom one
             broadcastCustomVars();
         }
 
-        // ==========================================
-        // 5. WEBSOCKET PIPELINE & MANIFEST LOGIC
-        // ==========================================
-        const statusText = document.getElementById('connection-status-text');
-        const statusDot = document.getElementById('status-dot');
-
-        // NEW: This compiles a list of custom variables currently on the iPad, and sends them to the sim
         function broadcastCustomVars() {
             if (!ws || ws.readyState !== WebSocket.OPEN) return;
             let varsToTrack = [];
@@ -710,15 +778,12 @@
                     }
                 });
             }
-            
-            // We broadcast this back through the router to the Sim
             ws.send(JSON.stringify({ type: "SET_CUSTOM_VARS", vars: varsToTrack }));
         }
 
         function updateStatus(state) {
             const statusDot = document.getElementById('status-dot');
             const statusText = document.getElementById('connection-status-text');
-            
             if (!statusDot || !statusText) return; 
             
             statusDot.className = 'status-indicator'; 
@@ -733,12 +798,9 @@
 
         function connect() {
             ws = new WebSocket('wss://msfs-relay.onrender.com');
-            
             ws.onopen = () => {
                 updateStatus('connected');
                 ws.send(JSON.stringify({ type: "join", pin: USER_PIN }));
-                
-                // When we connect, immediately tell the sim what custom vars we need
                 setTimeout(broadcastCustomVars, 1000);
             };
 
@@ -746,12 +808,16 @@
                 try {
                     const data = JSON.parse(event.data);
                     if (!isEditMode) {
+                        
+                        const combinedDict = getCombinedDictionary();
+
                         pagesData[currentPage].forEach((cellData, index) => {
                             if (cellData && cellData.id) {
-                                const dictItem = DICTIONARY[cellData.id];
+                                // Fallback to cellData.baseType if they loaded a saved custom item
+                                const dictId = cellData.baseType ? cellData.baseType : cellData.id;
+                                const dictItem = combinedDict[dictId];
                                 
                                 if (dictItem && (dictItem.type === 'gauge' || dictItem.type === 'rotary')) {
-                                    // NEW: Check if it's a custom variable ("custom_VARNAME") or a standard curated one
                                     const dataKey = cellData.customVar ? ("custom_" + cellData.customVar) : dictItem.dataKey;
                                     const simValue = data[dataKey];
                                     

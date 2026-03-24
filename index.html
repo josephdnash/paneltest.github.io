@@ -137,6 +137,8 @@
         .profile-item.active { border-color: var(--accent-blue); background: rgba(14, 165, 233, 0.1); color: var(--accent-blue); }
         .profile-item:hover:not(.active) { background: #3f3f46; }
         .create-profile-btn { background: var(--accent-green); color: black; font-weight: bold; border: none; padding: 14px; border-radius: 8px; cursor: pointer; margin-top: 16px; font-size: 14px; }
+        
+        /* THE UX FIX: Updated Button Text */
         .unpair-btn { background: transparent; color: var(--accent-red); border: 1px solid var(--accent-red); padding: 14px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; margin-top: 8px; width: 100%;}
         .unpair-btn:hover { background: rgba(239, 68, 68, 0.1); }
     </style>
@@ -175,7 +177,7 @@
             <h2 style="margin-top: 0; color: white;">Layout Profiles</h2>
             <div id="profile-list" style="max-height: 300px; overflow-y: auto;"></div>
             <button class="create-profile-btn" onclick="createNewProfile()">+ CREATE NEW LAYOUT</button>
-            <button class="unpair-btn" onclick="unpairDevice()">UNPAIR THIS IPAD</button>
+            <button class="unpair-btn" onclick="unpairDevice()">UNPAIR THIS DEVICE</button>
             <button class="cancel-btn" style="margin-top: 8px;" onclick="closeProfileModal()">Close</button>
         </div>
     </div>
@@ -200,14 +202,12 @@
         // ==========================================
         let USER_PIN = localStorage.getItem("efb_pairing_pin");
 
-        // If we have a PIN saved, skip the lock screen and boot the app
         if (USER_PIN) {
             document.getElementById('lock-screen').style.display = 'none';
             document.getElementById('app-container').style.display = 'flex';
             initializeSystem();
         }
 
-        // Fired when user clicks "Connect" on lock screen
         function attemptPairing() {
             const input = document.getElementById('pin-input').value.toUpperCase().trim();
             if (input.length === 6) {
@@ -221,16 +221,14 @@
             }
         }
 
-        // Fired from the Profile Modal
         function unpairDevice() {
             localStorage.removeItem("efb_pairing_pin");
-            location.reload(); // Reload page to show lock screen
+            location.reload(); 
         }
 
         // ==========================================
         // 1. FIREBASE & CORE SYSTEM (Wrapped in init)
         // ==========================================
-        // The Dictionary remains global so it loads instantly
         const DICTIONARY = {
             "nav_folder": { category: "EFB Tools", name: "Create Folder", icon: "📁", type: "nav" },
             "nav_back": { category: "EFB Tools", name: "Back to Home", icon: "⬅️", type: "nav", targetPage: 0 },
@@ -300,7 +298,6 @@
             "rotary_nav2_fract": { category: "Radios", name: "NAV2 Fract", icon: "📡", type: "rotary", dataKey: "nav2_stby", unit: "", decimals: 2, cmdDec: "NAV2_RADIO_FRACT_DEC", cmdInc: "NAV2_RADIO_FRACT_INC" }
         };
 
-        // UI State Variables
         let isEditMode = true;
         let selectedCellIndex = null;
         let draggedCellIndex = null; 
@@ -312,7 +309,6 @@
         let availableProfiles = [];
         let layoutListener = null;
 
-        // Firebase Refs (Scoped inside initializeSystem)
         let globalActiveProfileRef, profileListRef, allLayoutsRef;
 
         function initializeSystem() {
@@ -327,17 +323,14 @@
                 measurementId: "G-0VN39QBKR1"
             };
 
-            // Only initialize if not already initialized
             if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
             const database = firebase.database();
 
-            // 🔥 THE SILO: All Firebase saves are now locked strictly to this user's PIN folder!
             const userDbRef = database.ref('efb_users/' + USER_PIN);
             globalActiveProfileRef = userDbRef.child('active_profile');
             profileListRef = userDbRef.child('profile_list');
             allLayoutsRef = userDbRef.child('layouts');
 
-            // Connect UI to Firebase
             globalActiveProfileRef.on('value', (snap) => {
                 let active = snap.val();
                 if (!active) {
@@ -355,7 +348,6 @@
                 }
             });
 
-            // Connect the WebSocket
             connect();
         }
 
@@ -520,11 +512,17 @@
         // ==========================================
         // 4. COMPONENT MODAL LOGIC
         // ==========================================
+        
+        // THE UX FIX: Initialize state globally so it remembers your last selection!
         let currentModalCategory = "All";
 
         function openModal(index) {
-            selectedCellIndex = index; currentModalCategory = "All"; document.getElementById('modal-search').value = ""; 
-            renderModalCategories(); filterModal(); document.getElementById('component-modal').style.display = 'flex';
+            selectedCellIndex = index; 
+            document.getElementById('modal-search').value = ""; 
+            
+            renderModalCategories(); 
+            filterModal(); 
+            document.getElementById('component-modal').style.display = 'flex';
         }
 
         function renderModalCategories() {
@@ -661,7 +659,6 @@
             
             ws.onopen = () => {
                 updateStatus('connected');
-                // 🔥 THE ROUTER: Tell the server to only listen to our Simulator's Room!
                 ws.send(JSON.stringify({ type: "join", pin: USER_PIN }));
             };
 
@@ -704,7 +701,6 @@
 
         function sendCommand(cmd) {
             if (ws && ws.readyState === WebSocket.OPEN) {
-                // Note: We don't need to specify the PIN here, the server remembers our socket belongs to the room
                 ws.send(JSON.stringify({ type: "SD_COMMAND", command: cmd }));
             }
         }

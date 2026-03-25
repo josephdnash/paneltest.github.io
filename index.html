@@ -175,7 +175,6 @@
             <button id="auth-action-btn" onclick="handleAuthAction()">LOG IN</button>
             
             <div class="auth-toggle" id="auth-toggle-link" onclick="toggleAuthMode()">Don't have an account? Sign Up</div>
-            
             <div class="auth-forgot" id="auth-forgot-link" onclick="resetPassword()">Forgot Password?</div>
 
             <div class="auth-divider">
@@ -239,7 +238,10 @@
             <div id="profile-list" style="max-height: 200px; overflow-y: auto; margin-bottom: 8px;"></div>
             
             <button class="btn-action btn-primary" onclick="createNewProfile()">+ CREATE NEW LAYOUT</button>
-            <button class="btn-action btn-secondary" onclick="duplicateProfile()">👯 DUPLICATE CURRENT</button>
+            <div style="display: flex; gap: 8px; margin-top: 8px;">
+                <button class="btn-action btn-secondary" style="margin-top: 0;" onclick="duplicateProfile()">👯 DUPLICATE</button>
+                <button class="btn-action btn-secondary" style="margin-top: 0; background: var(--accent-yellow); color: black;" onclick="renameProfile()">✏️ RENAME</button>
+            </div>
             
             <div style="display: flex; gap: 8px; margin-top: 8px;">
                 <button class="btn-action btn-outline" style="margin-top: 0;" onclick="importProfile()">📥 IMPORT</button>
@@ -315,8 +317,6 @@
             document.getElementById('auth-title').innerText = isSignUpMode ? "Create Account" : "Log In";
             document.getElementById('auth-action-btn').innerText = isSignUpMode ? "SIGN UP" : "LOG IN";
             document.getElementById('auth-toggle-link').innerText = isSignUpMode ? "Already have an account? Log In" : "Don't have an account? Sign Up";
-            
-            // NEW: Hide "Forgot Password" if they are on the Sign Up screen
             document.getElementById('auth-forgot-link').style.display = isSignUpMode ? "none" : "block";
         }
 
@@ -340,13 +340,11 @@
             }
         }
 
-        // NEW: PASSWORD RECOVERY FUNCTION
         function resetPassword() {
             let email = document.getElementById('auth-email').value.trim();
-            
             if (!email) {
                 email = prompt("Please enter your account email address to receive a password reset link:");
-                if (!email) return; // User clicked Cancel
+                if (!email) return; 
             }
 
             firebase.auth().sendPasswordResetEmail(email)
@@ -631,6 +629,35 @@
                     globalActiveProfileRef.set(cleanName);
                     closeProfileModal();
                 }).catch(e => alert("Could not duplicate profile."));
+            }
+        }
+
+        // NEW: RENAME PROFILE FUNCTION
+        function renameProfile() {
+            if (!currentProfile || currentProfile === "Default") {
+                alert("The 'Default' profile cannot be renamed.");
+                return;
+            }
+
+            let newName = prompt(`Rename "${currentProfile}" to:`, currentProfile);
+            
+            if (newName && newName.trim() !== "" && newName.trim() !== currentProfile) {
+                let cleanName = newName.trim();
+                
+                if (availableProfiles.includes(cleanName)) {
+                    let overwrite = confirm(`A profile named "${cleanName}" already exists. Overwrite it?`);
+                    if (!overwrite) return;
+                }
+
+                let oldName = currentProfile;
+
+                allLayoutsRef.child(cleanName).set(pagesData).then(() => {
+                    profileListRef.child(cleanName).set(true);
+                    profileListRef.child(oldName).remove();
+                    globalActiveProfileRef.set(cleanName);
+                    allLayoutsRef.child(oldName).remove();
+                    closeProfileModal();
+                }).catch(e => alert("Could not rename profile."));
             }
         }
 

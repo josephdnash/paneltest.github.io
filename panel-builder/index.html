@@ -583,7 +583,17 @@
                 }
                 renderGrid();
                 broadcastCustomVars();
+
+                // NEW: Demand a full state sync upon loading/rendering a layout
+                setTimeout(requestFullSync, 100);
             });
+        }
+
+        // --- NEW: Handshake Request function
+        function requestFullSync() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "REQUEST_STATE" }));
+            }
         }
 
         function saveLayout() {
@@ -673,7 +683,6 @@
             });
         }
 
-        // NEW: LIBRARY EXTRACTION LOGIC IN IMPORT
         function importProfile() {
             let code = prompt("Enter the Share Code (e.g. SH-A1B2C3):");
             if (!code) return;
@@ -686,13 +695,11 @@
                     if (newName && newName.trim() !== "") {
                         let cleanName = newName.trim();
                         
-                        // Extract Custom Components into the user's library
                         let newCustoms = {};
                         for (let p = 0; p < 10; p++) {
                             if (!importedData[p]) continue;
                             importedData[p].forEach(cell => {
                                 if (cell && cell.customVar) {
-                                    // Check if we already have this specific custom var in our library
                                     let exists = Object.values(myCustomComponents).some(
                                         existing => existing.customVar === cell.customVar && existing.baseType === (cell.baseType || cell.id)
                                     );
@@ -706,14 +713,12 @@
                                             customCmd: cell.customCmd || "",
                                             customDisplayUnit: cell.customDisplayUnit || ""
                                         };
-                                        // Update local dict immediately to prevent duplicate extractions in the same loop
                                         myCustomComponents[customId] = newCustoms[customId];
                                     }
                                 }
                             });
                         }
 
-                        // Push new components to DB
                         if (Object.keys(newCustoms).length > 0) {
                             customComponentsRef.update(newCustoms);
                         }
@@ -732,9 +737,25 @@
         }
 
         function changePage(pageIndex, folderName = "") {
-            currentPage = pageIndex; currentFolderName = folderName;
-            if (currentPage === 0) document.getElementById('breadcrumb').innerText = "HOME";
-            else document.getElementById('breadcrumb').innerText = `HOME > ${currentFolderName}`;
+            currentPage = pageIndex; 
+            
+            if (currentPage === 0) {
+                document.getElementById('breadcrumb').innerText = "HOME";
+            } else {
+                let foundName = folderName || "FOLDER";
+                if (!folderName) {
+                    for (let p = 0; p < 10; p++) {
+                        if (pagesData[p]) {
+                            let folderBtn = pagesData[p].find(c => c && c.id === "nav_folder" && c.targetPage === currentPage);
+                            if (folderBtn && folderBtn.label) { 
+                                foundName = folderBtn.label; 
+                                break; 
+                            }
+                        }
+                    }
+                }
+                document.getElementById('breadcrumb').innerText = `HOME > ${foundName}`;
+            }
             renderGrid();
         }
 

@@ -225,7 +225,13 @@
             <h2 style="margin-top: 0; color: white;">Settings</h2>
             <div style="flex-grow: 1;">
                 <p style="color: var(--text-muted); font-size: 14px; line-height: 1.5;">Manage your connection and account.</p>
-                <button class="unpair-btn" style="color: var(--accent-yellow); border-color: var(--accent-yellow);" onclick="unpairDevice()">UNPAIR SIMULATOR</button>
+                
+                <div style="background: #000; border: 1px solid #333; border-radius: 8px; padding: 12px; margin-bottom: 16px; text-align: center;">
+                    <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; font-weight: bold;">Current Pairing ID</div>
+                    <div id="settings-pin-display" style="font-family: 'Roboto Mono', monospace; font-size: 24px; color: var(--accent-blue); font-weight: 800; letter-spacing: 2px;">------</div>
+                </div>
+
+                <button class="unpair-btn" style="color: var(--accent-yellow); border-color: var(--accent-yellow); margin-top: 0;" onclick="unpairDevice()">UNPAIR SIMULATOR</button>
                 <button class="unpair-btn" onclick="logoutAccount()">LOG OUT</button>
             </div>
             <button class="cancel-btn" style="margin-top: 16px;" onclick="closeSettingsModal()">Close</button>
@@ -391,7 +397,7 @@
         });
 
         // ==========================================
-        // 4. PIN PAIRING LOGIC
+        // 4. PIN PAIRING & SETTINGS LOGIC
         // ==========================================
         function attemptPairing() {
             const input = document.getElementById('pin-input').value.toUpperCase().trim();
@@ -414,7 +420,11 @@
             }
         }
 
-        function openSettingsModal() { document.getElementById('settings-modal').style.display = 'flex'; }
+        // NEW: Load the PIN into the UI block before showing the modal
+        function openSettingsModal() { 
+            document.getElementById('settings-pin-display').innerText = USER_PIN || "NONE";
+            document.getElementById('settings-modal').style.display = 'flex'; 
+        }
         function closeSettingsModal() { document.getElementById('settings-modal').style.display = 'none'; }
 
         // ==========================================
@@ -584,12 +594,10 @@
                 renderGrid();
                 broadcastCustomVars();
 
-                // NEW: Demand a full state sync upon loading/rendering a layout
                 setTimeout(requestFullSync, 100);
             });
         }
 
-        // --- NEW: Handshake Request function
         function requestFullSync() {
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ type: "REQUEST_STATE" }));

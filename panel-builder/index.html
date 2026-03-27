@@ -261,7 +261,15 @@
     <div id="component-modal" class="overlay">
         <div class="modal-content">
             <div class="modal-sidebar">
-                <h2 style="margin-top: 0; margin-bottom: 20px; font-size: 18px; color: white;">Library</h2>
+                <h2 style="margin-top: 0; margin-bottom: 12px; font-size: 18px; color: white;">Library</h2>
+                
+                <div style="margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border-panel);">
+                    <label style="color: var(--text-muted); font-size: 10px; font-weight: bold; text-transform: uppercase;">Aircraft Specific Presets</label>
+                    <select id="modal-aircraft-select" style="width: 100%; background: #000; color: white; border: 1px solid #333; padding: 12px; border-radius: 8px; margin-top: 8px; outline: none; font-family: 'Inter', sans-serif; cursor: pointer;" onchange="loadAircraftPresets()">
+                        <option value="none">Standard Controls Only</option>
+                    </select>
+                </div>
+
                 <div id="modal-categories" style="display: flex; flex-direction: column; overflow-y: auto; flex-grow: 1;"></div>
                 <button class="cancel-btn" onclick="closeModal()">Close</button>
             </div>
@@ -276,6 +284,8 @@
         // ==========================================
         // 1. STATE VARIABLES & CONFIGURATION
         // ==========================================
+        const API_BASE_URL = "https://msfs-relay.onrender.com";
+
         let USER_PIN = localStorage.getItem("efb_pairing_pin");
         let CURRENT_UID = null; 
         
@@ -290,6 +300,11 @@
         let layoutListener = null;
         let currentModalCategory = "All";
         let myCustomComponents = {};
+        
+        // NEW: HubHop State Variables
+        let availableAircraft = [];
+        let hubhopComponents = {};
+        let currentSelectedAircraft = "none";
 
         // Firebase Refs
         let database;
@@ -427,7 +442,59 @@
         function closeSettingsModal() { document.getElementById('settings-modal').style.display = 'none'; }
 
         // ==========================================
-        // 5. THE MEGA DICTIONARY
+        // 5. HUBHOP API FETCHING
+        // ==========================================
+        async function fetchAircraftList() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/aircraft`);
+                availableAircraft = await response.json();
+                
+                const select = document.getElementById('modal-aircraft-select');
+                availableAircraft.forEach(ac => {
+                    let opt = document.createElement('option');
+                    opt.value = ac;
+                    opt.innerText = ac;
+                    select.appendChild(opt);
+                });
+            } catch(e) {
+                console.warn("Failed to reach preset server. Running in offline mode.");
+            }
+        }
+
+        async function loadAircraftPresets() {
+            const select = document.getElementById('modal-aircraft-select');
+            currentSelectedAircraft = select.value;
+            hubhopComponents = {}; 
+
+            if (currentSelectedAircraft !== "none") {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/presets/${encodeURIComponent(currentSelectedAircraft)}`);
+                    const presets = await response.json();
+                    
+                    presets.forEach(p => {
+                        let id = "hubhop_" + Math.random().toString(36).substr(2, 9);
+                        hubhopComponents[id] = {
+                            category: "⭐ " + p.aircraft, 
+                            name: p.label,
+                            icon: "✨",
+                            type: "button",
+                            customCmd: p.command,
+                            isHubHop: true,
+                            baseType: "custom_button"
+                        };
+                    });
+                } catch(e) { 
+                    console.error("Failed to load specific aircraft presets", e); 
+                }
+            }
+            
+            currentModalCategory = "All"; 
+            renderModalCategories();
+            filterModal();
+        }
+
+        // ==========================================
+        // 6. THE MEGA DICTIONARY
         // ==========================================
         const DICTIONARY = {
             // EFB Tools
@@ -534,6 +601,7 @@
             "rotary_magneto": { category: "Rotaries", name: "Ignition Key", icon: "🔑", type: "rotary", dataKey: "magneto_state", unit: "", cmdDec: "MAGNETO1_DEC", cmdInc: "MAGNETO1_INC" }
         };
 
+        // NEW: Injects fetched HubHop buttons right into the dictionary
         function getCombinedDictionary() {
             let combined = { ...DICTIONARY };
             if (myCustomComponents) {
@@ -549,11 +617,16 @@
                     };
                 });
             }
+            if (hubhopComponents) {
+                Object.keys(hubhopComponents).forEach(key => {
+                    combined[key] = hubhopComponents[key];
+                });
+            }
             return combined;
         }
 
         // ==========================================
-        // 6. DB INITIALIZATION & SILOS
+        // 7. DB INITIALIZATION & SILOS
         // ==========================================
         function initializeDataSilos() {
             const userDbRef = database.ref('users/' + CURRENT_UID);
@@ -563,6 +636,9 @@
             allLayoutsRef = userDbRef.child('layouts');
             customComponentsRef = userDbRef.child('custom_components'); 
             sharedProfilesRef = database.ref('efb_shared_profiles');
+
+            // Boot up the HubHop List
+            fetchAircraftList();
 
             let isInitializing = false;
 
@@ -594,7 +670,7 @@
         }
 
         // ==========================================
-        // 7. PROFILE & SHARING LOGIC
+        // 8. PROFILE & SHARING LOGIC
         // ==========================================
         function loadProfile(profileName) {
             if (layoutListener && currentProfile) {
@@ -799,7 +875,7 @@
         }
 
         // ==========================================
-        // 8. UI RENDERING & DRAG/DROP
+        // 9. UI RENDERING & DRAG/DROP
         // ==========================================
         function renderGrid() {
             const grid = document.getElementById('builder-grid');
@@ -954,11 +1030,12 @@
                 if (data.type === 'rotary') tagColor = 'var(--accent-yellow)';
                 if (data.type === 'nav') tagColor = 'var(--accent-purple)';
                 if (data.isSavedCustom) tagColor = 'var(--accent-red)'; 
+                if (data.isHubHop) tagColor = 'var(--accent-purple)'; // NEW: Special color for HubHop imports
 
                 item.innerHTML = `
                     <span style="font-size: 24px; min-width: 32px; text-align: center;">${data.icon}</span> 
                     <span style="font-size: 16px;">${data.name}</span>
-                    <span class="component-tag" style="color: ${tagColor}">${data.isSavedCustom ? "SAVED CUSTOM" : data.type.toUpperCase()}</span>
+                    <span class="component-tag" style="color: ${tagColor}">${data.isHubHop ? "AIRCRAFT SPECIFIC" : (data.isSavedCustom ? "SAVED CUSTOM" : data.type.toUpperCase())}</span>
                 `;
                 item.onclick = () => assignCell(id);
                 list.appendChild(item);
@@ -983,18 +1060,18 @@
                     saveLayout(); renderGrid();
                 }
             } 
-            else if (cellData.customVar) {
+            else if (cellData.customVar || cellData.customCmd) {
                 let action = confirm(`Do you want to EDIT "${currentName}"?\n\n[OK] to Edit Properties\n[Cancel] to Swap for a different component`);
                 if (action) {
                     let newLabel = prompt("Edit Label:", cellData.label);
                     if (newLabel === null) return;
                     
-                    let newVar = prompt("Edit MSFS SimVar:", cellData.customVar);
-                    if (newVar === null) return;
-
                     let isGauge = cellData.baseType === "custom_gauge" || cellData.id === "custom_gauge";
                     
                     if (isGauge) {
+                        let newVar = prompt("Edit MSFS SimVar:", cellData.customVar);
+                        if (newVar === null) return;
+                        
                         let newUnit = prompt("Edit SimVar Unit (e.g. celsius):", cellData.customUnit);
                         if (newUnit === null) return;
                         let newDisp = prompt("Edit Display Text (e.g. °C):", cellData.customDisplayUnit);
@@ -1005,12 +1082,11 @@
                         pagesData[currentPage][index].customUnit = newUnit.trim().toLowerCase();
                         pagesData[currentPage][index].customDisplayUnit = newDisp;
                     } else {
-                        let newCmd = prompt("Edit K-Event Command:", cellData.customCmd);
+                        let newCmd = prompt("Edit Action/K-Event Command:", cellData.customCmd);
                         if (newCmd === null) return;
 
                         pagesData[currentPage][index].label = newLabel.substring(0,12).toUpperCase();
-                        pagesData[currentPage][index].customVar = newVar.trim().toUpperCase();
-                        pagesData[currentPage][index].customCmd = newCmd.trim().toUpperCase();
+                        pagesData[currentPage][index].customCmd = newCmd.trim();
                     }
                     saveLayout(); renderGrid(); broadcastCustomVars();
                 } else {
@@ -1031,6 +1107,7 @@
             }
         }
 
+        // NEW: Logic added to seamlessly handle HubHop buttons and save them like custom buttons
         function assignCell(componentId) {
             if (selectedCellIndex === null) return;
             
@@ -1067,14 +1144,14 @@
                 }
                 pagesData[currentPage][selectedCellIndex] = { id: componentId, label: "Back", targetPage: parentPage };
             
-            } else if (dictItem.isSavedCustom) {
+            } else if (dictItem.isSavedCustom || dictItem.isHubHop) {
                 pagesData[currentPage][selectedCellIndex] = {
                     id: dictItem.baseType,
-                    label: dictItem.label,
-                    customVar: dictItem.customVar,
-                    customUnit: dictItem.customUnit,
-                    customCmd: dictItem.customCmd,
-                    customDisplayUnit: dictItem.customDisplayUnit,
+                    label: dictItem.label || dictItem.name.substring(0,12).toUpperCase(),
+                    customVar: dictItem.customVar || "",
+                    customUnit: dictItem.customUnit || "",
+                    customCmd: dictItem.customCmd || "",
+                    customDisplayUnit: dictItem.customDisplayUnit || "",
                     baseType: dictItem.baseType
                 };
 
@@ -1082,14 +1159,14 @@
                 let customLabel = prompt("Enter a short label for the grid (e.g. CYL TEMP):", "CUSTOM");
                 if (!customLabel) return;
 
-                let simVar = prompt("Enter the exact MSFS SimVar to track (e.g. ENG CYLINDER HEAD TEMPERATURE:1):");
-                if (!simVar) return;
-
                 let customUnit = "number";
                 let customCmd = "";
                 let customDisplayUnit = "";
+                let simVar = "";
 
                 if (dictItem.type === "gauge") {
+                    simVar = prompt("Enter the exact MSFS SimVar to track (e.g. ENG CYLINDER HEAD TEMPERATURE:1):");
+                    if (!simVar) return;
                     customUnit = prompt("Enter the SimVar Unit (e.g. celsius, percent, knots):", "number") || "number";
                     customDisplayUnit = prompt("Enter text to display after the number (e.g. °C, %, KTS):", "") || "";
                 } else if (dictItem.type === "button") {
@@ -1103,7 +1180,7 @@
                     customComponentsRef.child(customId).set({
                         baseType: componentId,
                         label: customLabel.substring(0,12).toUpperCase(),
-                        customVar: simVar.trim().toUpperCase(),
+                        customVar: simVar ? simVar.trim().toUpperCase() : "",
                         customUnit: customUnit.trim().toLowerCase(),
                         customCmd: customCmd ? customCmd.trim() : "",
                         customDisplayUnit: customDisplayUnit
@@ -1113,7 +1190,7 @@
                 pagesData[currentPage][selectedCellIndex] = {
                     id: componentId,
                     label: customLabel.substring(0,12).toUpperCase(),
-                    customVar: simVar.trim().toUpperCase(),
+                    customVar: simVar ? simVar.trim().toUpperCase() : "",
                     customUnit: customUnit.trim().toLowerCase(),
                     customCmd: customCmd ? customCmd.trim() : "",
                     customDisplayUnit: customDisplayUnit
@@ -1145,7 +1222,7 @@
         }
 
         // ==========================================
-        // 9. WEBSOCKET PIPELINE
+        // 10. WEBSOCKET PIPELINE
         // ==========================================
         function broadcastCustomVars() {
             if (!ws || ws.readyState !== WebSocket.OPEN) return;

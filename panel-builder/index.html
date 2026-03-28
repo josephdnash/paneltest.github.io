@@ -446,7 +446,7 @@
             "c208_land_l": { category: "C208 Specific", name: "L Land Lgt", icon: "🔦", type: "smart_toggle", trackingVar: "LIGHT LANDING ON:1", onCmd: "1 (>B:LIGHTING_LANDING_1_Set)", offCmd: "0 (>B:LIGHTING_LANDING_1_Set)" },
             "c208_land_r": { category: "C208 Specific", name: "R Land Lgt", icon: "🔦", type: "smart_toggle", trackingVar: "LIGHT LANDING ON:2", onCmd: "1 (>B:LIGHTING_LANDING_2_Set)", offCmd: "0 (>B:LIGHTING_LANDING_2_Set)" },
 
-            // Radios (RESTORED)
+            // Radios
             "radio_com1_swap": { category: "Radios", name: "COM 1 Swap", icon: "📻", type: "button", command: "COM_STBY_RADIO_SWAP" },
             "radio_nav1_swap": { category: "Radios", name: "NAV 1 Swap", icon: "📡", type: "button", command: "NAV1_RADIO_SWAP" },
             "radio_com2_swap": { category: "Radios", name: "COM 2 Swap", icon: "📻", type: "button", command: "COM2_RADIO_SWAP" },
@@ -479,7 +479,7 @@
             "apu_start": { category: "Electrical", name: "APU Start", icon: "🔄", type: "button", command: "APU_STARTER" },
             "apu_off": { category: "Electrical", name: "APU Off", icon: "🛑", type: "button", command: "APU_OFF_SWITCH" },
             
-            // Engines & Fuel (RESTORED ORIGINALS)
+            // Engines & Fuel
             "eng1_starter": { category: "Engines", name: "ENG 1 Starter", icon: "🔑", type: "button", command: "TOGGLE_STARTER1", stateKey: "eng1_starter_state" },
             "eng2_starter": { category: "Engines", name: "ENG 2 Starter", icon: "🔑", type: "button", command: "TOGGLE_STARTER2", stateKey: "eng2_starter_state" },
             "fuel_pump_gen": { category: "Engines", name: "Fuel Pump", icon: "⛽", type: "button", command: "TOGGLE_ELECTRICAL_FUEL_PUMP", stateKey: "fuel_pump_gen_state" },
@@ -534,7 +534,7 @@
             "gauge_fuel": { category: "Telemetry", name: "Fuel Qty", icon: "⛽", type: "gauge", dataKey: "fuel_pct", unit: " Gal" },
             "gauge_oat": { category: "Telemetry", name: "Outside Temp", icon: "🌡️", type: "gauge", dataKey: "oat", unit: "°C" },
             
-            // Rotaries (RESTORED RADIO DIALS)
+            // Rotaries
             "rotary_hdg": { category: "Rotaries", name: "AP Heading", icon: "🧭", type: "rotary", dataKey: "ap_hdg", unit: "°", cmdDec: "HEADING_BUG_DEC", cmdInc: "HEADING_BUG_INC" },
             "rotary_alt": { category: "Rotaries", name: "AP Altitude", icon: "↕️", type: "rotary", dataKey: "ap_alt", unit: " FT", cmdDec: "AP_ALT_VAR_DEC", cmdInc: "AP_ALT_VAR_INC" },
             "rotary_vs": { category: "Rotaries", name: "AP Vert Spd", icon: "📈", type: "rotary", dataKey: "ap_vs", unit: " FPM", cmdDec: "AP_VS_VAR_DEC", cmdInc: "AP_VS_VAR_INC" },
@@ -630,13 +630,11 @@
             layoutListener = allLayoutsRef.child(profileName).on('value', (snapshot) => {
                 const data = snapshot.val();
                 
-                // THE FIX: Remove Array.isArray(). Treat data as a raw object to bypass Firebase's array conversion quirk.
                 let safePages = new Array(10).fill(null).map(() => new Array(24).fill(""));
                 
                 if (data) {
                     for (let p = 0; p < 10; p++) {
                         if (data[p]) {
-                            // Object.keys works safely on both Arrays and Objects!
                             Object.keys(data[p]).forEach(key => {
                                 let index = parseInt(key);
                                 if (!isNaN(index) && index >= 0 && index < 24) {
@@ -712,7 +710,6 @@
             if (newName && newName.trim() !== "") {
                 let cleanName = newName.trim();
                 
-                // THE FIX: Safely dig for the tag without crashing if the object isn't ready
                 let existingTag = "Global";
                 if (availableProfiles && availableProfiles[currentProfile] && availableProfiles[currentProfile].aircraftTag) {
                     existingTag = availableProfiles[currentProfile].aircraftTag;
@@ -743,7 +740,6 @@
             if (newName && newName.trim() !== "" && newName.trim() !== currentProfile) {
                 let cleanName = newName.trim();
                 
-                // THE FIX: Safely dig for the tag
                 let existingTag = "Global";
                 if (availableProfiles && availableProfiles[currentProfile] && availableProfiles[currentProfile].aircraftTag) {
                     existingTag = availableProfiles[currentProfile].aircraftTag;
@@ -766,7 +762,7 @@
                 }).catch(e => alert("Could not rename profile."));
             }
         }
-
+        
         function deleteProfile() {
             if (!currentProfile || currentProfile === "Default") {
                 alert("The 'Default' profile is a system requirement and cannot be deleted.");
@@ -778,9 +774,7 @@
             if (confirmDelete) {
                 let oldName = currentProfile;
                 
-                // Immediately switch the active profile back to Default
                 globalActiveProfileRef.set("Default").then(() => {
-                    // Wipe the old profile from the Firebase directory and layouts database
                     profileListRef.child(oldName).remove();
                     allLayoutsRef.child(oldName).remove();
                     
@@ -789,18 +783,16 @@
             }
         }
 
-        
         function shareProfile() {
             if (!currentProfile) return;
             
             let tag = prompt("Add an Aircraft Tag so others know what plane this is built for (e.g. 'Fenix A320', 'Working Title C208'):", 
                              availableProfiles[currentProfile] ? availableProfiles[currentProfile].aircraftTag : "General Aviation");
             
-            if (tag === null) return; // Cancelled
+            if (tag === null) return; 
 
             const shareCode = "SH-" + Math.random().toString(36).substring(2, 8).toUpperCase();
             
-            // Package the layout AND the tag together
             const exportPayload = {
                 layoutData: pagesData,
                 aircraftTag: tag.trim() || "Global"
@@ -838,7 +830,6 @@
                         for (let p = 0; p < 10; p++) {
                             if (!layoutDataToImport[p]) continue;
                             
-                            // THE FIX: Force Firebase Objects back into Arrays so .forEach() doesn't crash
                             let cellArray = Array.isArray(layoutDataToImport[p]) ? layoutDataToImport[p] : Object.values(layoutDataToImport[p]);
 
                             cellArray.forEach(cell => {
@@ -950,9 +941,14 @@
                         
                         if (cellData.baseType === "smart_toggle" || dictItem.type === "smart_toggle") {
                             cell.onclick = () => {
-                                let liveVal = currentSimState["custom_" + cellData.trackingVar] || 0;
-                                if (liveVal >= 1) sendCommand(cellData.offCmd);
-                                else sendCommand(cellData.onCmd);
+                                // THE FIX: Allow standard dictionary items to pull their vars natively
+                                let trackVar = cellData.trackingVar || dictItem.trackingVar;
+                                let onC = cellData.onCmd || dictItem.onCmd;
+                                let offC = cellData.offCmd || dictItem.offCmd;
+
+                                let liveVal = currentSimState["custom_" + trackVar] || 0;
+                                if (liveVal >= 1) sendCommand(offC);
+                                else sendCommand(onC);
                             };
                         } else if (cellData.id === "custom_button" || cellData.baseType === "custom_button") {
                             cell.onclick = () => sendCommand(cellData.customCmd);
@@ -1242,7 +1238,16 @@
                 pagesData[currentPage][selectedCellIndex] = payload;
 
             } else {
-                pagesData[currentPage][selectedCellIndex] = { id: componentId, label: "", targetPage: dictItem.targetPage !== undefined ? dictItem.targetPage : "" };
+                // THE FIX: Allow standard dictionary components to carry their payload config
+                pagesData[currentPage][selectedCellIndex] = { 
+                    id: componentId, 
+                    label: "", 
+                    targetPage: dictItem.targetPage !== undefined ? dictItem.targetPage : "",
+                    trackingVar: dictItem.trackingVar || "",
+                    onCmd: dictItem.onCmd || "",
+                    offCmd: dictItem.offCmd || "",
+                    baseType: dictItem.baseType || componentId
+                };
             }
 
             saveLayout(); closeModal(); renderGrid();
@@ -1273,18 +1278,24 @@
             if (!ws || ws.readyState !== WebSocket.OPEN) return;
             let varsToTrack = [];
             let seen = new Set();
+            const combinedDict = getCombinedDictionary();
 
             for (let p = 0; p < 10; p++) {
                 if (!pagesData[p]) continue;
                 pagesData[p].forEach(cell => {
-                    if (cell) {
-                        if (cell.customVar && !seen.has(cell.customVar)) {
-                            seen.add(cell.customVar);
-                            varsToTrack.push({ name: cell.customVar, unit: cell.customUnit || "number" });
+                    if (cell && cell.id) {
+                        // THE FIX: Properly scrape tracking data from standard dictionary cells
+                        const dictItem = combinedDict[cell.baseType || cell.id];
+                        let cVar = cell.customVar || (dictItem ? dictItem.customVar : null);
+                        let tVar = cell.trackingVar || (dictItem ? dictItem.trackingVar : null);
+
+                        if (cVar && !seen.has(cVar)) {
+                            seen.add(cVar);
+                            varsToTrack.push({ name: cVar, unit: cell.customUnit || (dictItem && dictItem.customUnit ? dictItem.customUnit : "number") });
                         }
-                        if (cell.trackingVar && !seen.has(cell.trackingVar)) {
-                            seen.add(cell.trackingVar);
-                            varsToTrack.push({ name: cell.trackingVar, unit: "number" });
+                        if (tVar && !seen.has(tVar)) {
+                            seen.add(tVar);
+                            varsToTrack.push({ name: tVar, unit: "number" });
                         }
                     }
                 });
@@ -1346,7 +1357,7 @@
                                 if (dictItem && (dictItem.type === 'button' || dictItem.type === 'smart_toggle')) {
                                     let stateKey = dictItem.stateKey;
                                     if (cellData.customVar) stateKey = "custom_" + cellData.customVar;
-                                    if (cellData.trackingVar) stateKey = "custom_" + cellData.trackingVar; 
+                                    if (cellData.trackingVar || dictItem.trackingVar) stateKey = "custom_" + (cellData.trackingVar || dictItem.trackingVar); 
                                     
                                     if (stateKey && currentSimState[stateKey] !== undefined) {
                                         const stateValue = currentSimState[stateKey];

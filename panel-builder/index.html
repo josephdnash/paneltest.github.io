@@ -622,20 +622,25 @@
 
             layoutListener = allLayoutsRef.child(profileName).on('value', (snapshot) => {
                 const data = snapshot.val();
-                if (data && Array.isArray(data)) {
-                    let safePages = new Array(10).fill(null).map(() => new Array(24).fill(""));
+                
+                // THE FIX: Remove Array.isArray(). Treat data as a raw object to bypass Firebase's array conversion quirk.
+                let safePages = new Array(10).fill(null).map(() => new Array(24).fill(""));
+                
+                if (data) {
                     for (let p = 0; p < 10; p++) {
                         if (data[p]) {
+                            // Object.keys works safely on both Arrays and Objects!
                             Object.keys(data[p]).forEach(key => {
                                 let index = parseInt(key);
-                                if (!isNaN(index) && index >= 0 && index < 24) safePages[p][index] = data[p][key];
+                                if (!isNaN(index) && index >= 0 && index < 24) {
+                                    safePages[p][index] = data[p][key] || "";
+                                }
                             });
                         }
                     }
-                    pagesData = safePages;
-                } else {
-                    pagesData = new Array(10).fill(null).map(() => new Array(24).fill(""));
                 }
+                
+                pagesData = safePages;
                 renderGrid();
                 broadcastCustomVars();
 
@@ -699,10 +704,15 @@
             let newName = prompt(`Duplicate "${currentProfile}" as (e.g. ${currentProfile} V2):`);
             if (newName && newName.trim() !== "") {
                 let cleanName = newName.trim();
-                let existingTag = availableProfiles[currentProfile] ? availableProfiles[currentProfile].aircraftTag : "Global";
+                
+                // THE FIX: Safely dig for the tag without crashing if the object isn't ready
+                let existingTag = "Global";
+                if (availableProfiles && availableProfiles[currentProfile] && availableProfiles[currentProfile].aircraftTag) {
+                    existingTag = availableProfiles[currentProfile].aircraftTag;
+                }
 
-                // THE FIX: Safely check the Object keys to prevent overwriting an existing profile
-                if (Object.keys(availableProfiles).includes(cleanName)) {
+                let safeProfiles = availableProfiles || {};
+                if (Object.keys(safeProfiles).includes(cleanName)) {
                     let overwrite = confirm(`A profile named "${cleanName}" already exists. Overwrite it?`);
                     if (!overwrite) return;
                 }
@@ -725,10 +735,15 @@
             
             if (newName && newName.trim() !== "" && newName.trim() !== currentProfile) {
                 let cleanName = newName.trim();
-                let existingTag = availableProfiles[currentProfile] ? availableProfiles[currentProfile].aircraftTag : "Global";
                 
-                // THE FIX: Use Object.keys() to prevent the silent JavaScript crash
-                if (Object.keys(availableProfiles).includes(cleanName)) {
+                // THE FIX: Safely dig for the tag
+                let existingTag = "Global";
+                if (availableProfiles && availableProfiles[currentProfile] && availableProfiles[currentProfile].aircraftTag) {
+                    existingTag = availableProfiles[currentProfile].aircraftTag;
+                }
+                
+                let safeProfiles = availableProfiles || {};
+                if (Object.keys(safeProfiles).includes(cleanName)) {
                     let overwrite = confirm(`A profile named "${cleanName}" already exists. Overwrite it?`);
                     if (!overwrite) return;
                 }

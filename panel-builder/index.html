@@ -701,6 +701,12 @@
                 let cleanName = newName.trim();
                 let existingTag = availableProfiles[currentProfile] ? availableProfiles[currentProfile].aircraftTag : "Global";
 
+                // THE FIX: Safely check the Object keys to prevent overwriting an existing profile
+                if (Object.keys(availableProfiles).includes(cleanName)) {
+                    let overwrite = confirm(`A profile named "${cleanName}" already exists. Overwrite it?`);
+                    if (!overwrite) return;
+                }
+
                 allLayoutsRef.child(cleanName).set(pagesData).then(() => {
                     profileListRef.child(cleanName).set({ name: cleanName, aircraftTag: existingTag });
                     globalActiveProfileRef.set(cleanName);
@@ -720,6 +726,13 @@
             if (newName && newName.trim() !== "" && newName.trim() !== currentProfile) {
                 let cleanName = newName.trim();
                 let existingTag = availableProfiles[currentProfile] ? availableProfiles[currentProfile].aircraftTag : "Global";
+                
+                // THE FIX: Use Object.keys() to prevent the silent JavaScript crash
+                if (Object.keys(availableProfiles).includes(cleanName)) {
+                    let overwrite = confirm(`A profile named "${cleanName}" already exists. Overwrite it?`);
+                    if (!overwrite) return;
+                }
+
                 let oldName = currentProfile;
 
                 allLayoutsRef.child(cleanName).set(pagesData).then(() => {
@@ -787,7 +800,6 @@
                 if (snapshot.exists()) {
                     const importedPayload = snapshot.val();
                     
-                    // Handle backward compatibility if someone shared an old profile without a tag
                     const layoutDataToImport = importedPayload.layoutData || importedPayload;
                     const importedTag = importedPayload.aircraftTag || "Imported Profile";
 
@@ -795,11 +807,19 @@
                     if (newName && newName.trim() !== "") {
                         let cleanName = newName.trim();
                         
-                        // Look for any custom buttons in this imported layout and add them to our library
+                        if (Object.keys(availableProfiles).includes(cleanName)) {
+                            let overwrite = confirm(`A profile named "${cleanName}" already exists. Overwrite it?`);
+                            if (!overwrite) return;
+                        }
+
                         let newCustoms = {};
                         for (let p = 0; p < 10; p++) {
                             if (!layoutDataToImport[p]) continue;
-                            layoutDataToImport[p].forEach(cell => {
+                            
+                            // THE FIX: Force Firebase Objects back into Arrays so .forEach() doesn't crash
+                            let cellArray = Array.isArray(layoutDataToImport[p]) ? layoutDataToImport[p] : Object.values(layoutDataToImport[p]);
+
+                            cellArray.forEach(cell => {
                                 if (cell && (cell.customVar || cell.trackingVar)) {
                                     let exists = Object.values(myCustomComponents).some(
                                         existing => existing.label === cell.label && existing.baseType === (cell.baseType || cell.id)

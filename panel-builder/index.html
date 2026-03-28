@@ -439,6 +439,13 @@
             "custom_gauge": { category: "Custom Variables", name: "Custom Gauge", icon: "🛠️", type: "gauge", isCustom: true },
             "smart_toggle": { category: "Custom Variables", name: "Create Smart Toggle", icon: "🔀", type: "smart_toggle", isCustom: true },
             
+            // C208 Grand Caravan Specific
+            "c208_cond_high": { category: "C208 Specific", name: "Cond High", icon: "🟢", type: "button", command: "0 (>B:FUEL1_CONDITION_LEVER_Set)" },
+            "c208_cond_low": { category: "C208 Specific", name: "Cond Low", icon: "🟡", type: "button", command: "1 (>B:FUEL1_CONDITION_LEVER_Set)" },
+            "c208_cond_cutoff": { category: "C208 Specific", name: "Cond Cutoff", icon: "🔴", type: "button", command: "2 (>B:FUEL1_CONDITION_LEVER_Set)" },
+            "c208_land_l": { category: "C208 Specific", name: "L Land Lgt", icon: "🔦", type: "smart_toggle", trackingVar: "LIGHT LANDING ON:1", onCmd: "1 (>B:LIGHTING_LANDING_1_Set)", offCmd: "0 (>B:LIGHTING_LANDING_1_Set)" },
+            "c208_land_r": { category: "C208 Specific", name: "R Land Lgt", icon: "🔦", type: "smart_toggle", trackingVar: "LIGHT LANDING ON:2", onCmd: "1 (>B:LIGHTING_LANDING_2_Set)", offCmd: "0 (>B:LIGHTING_LANDING_2_Set)" },
+
             // Radios (RESTORED)
             "radio_com1_swap": { category: "Radios", name: "COM 1 Swap", icon: "📻", type: "button", command: "COM_STBY_RADIO_SWAP" },
             "radio_nav1_swap": { category: "Radios", name: "NAV 1 Swap", icon: "📡", type: "button", command: "NAV1_RADIO_SWAP" },

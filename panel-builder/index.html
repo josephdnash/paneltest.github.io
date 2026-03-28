@@ -256,6 +256,8 @@
                 <button class="btn-action btn-outline" style="margin-top: 0;" onclick="shareProfile()">📤 SHARE</button>
             </div>
             
+            <button class="btn-action" style="margin-top: 16px; background: rgba(239, 68, 68, 0.1); color: var(--accent-red); border: 1px solid var(--accent-red);" onclick="deleteProfile()">🗑️ DELETE PROFILE</button>
+            
             <button class="cancel-btn" style="margin-top: 16px;" onclick="closeProfileModal()">Close</button>
         </div>
     </div>
@@ -730,6 +732,29 @@
             }
         }
 
+        function deleteProfile() {
+            if (!currentProfile || currentProfile === "Default") {
+                alert("The 'Default' profile is a system requirement and cannot be deleted.");
+                return;
+            }
+
+            let confirmDelete = confirm(`Are you absolutely sure you want to delete "${currentProfile}"?\n\nThis will permanently erase the layout from the cloud.`);
+            
+            if (confirmDelete) {
+                let oldName = currentProfile;
+                
+                // Immediately switch the active profile back to Default
+                globalActiveProfileRef.set("Default").then(() => {
+                    // Wipe the old profile from the Firebase directory and layouts database
+                    profileListRef.child(oldName).remove();
+                    allLayoutsRef.child(oldName).remove();
+                    
+                    closeProfileModal();
+                }).catch(e => alert("Could not delete profile. Check network connection."));
+            }
+        }
+
+        
         function shareProfile() {
             if (!currentProfile) return;
             

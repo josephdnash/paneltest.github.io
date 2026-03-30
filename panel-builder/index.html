@@ -527,10 +527,10 @@
             "c208_land_l": { category: "C208 Specific", name: "L Land Lgt", icon: "🔦", type: "smart_toggle", trackingVar: "LIGHT LANDING ON:1", onCmd: "1 (>B:LIGHTING_LANDING_1_Set)", offCmd: "0 (>B:LIGHTING_LANDING_1_Set)" },
             "c208_land_r": { category: "C208 Specific", name: "R Land Lgt", icon: "🔦", type: "smart_toggle", trackingVar: "LIGHT LANDING ON:2", onCmd: "1 (>B:LIGHTING_LANDING_2_Set)", offCmd: "0 (>B:LIGHTING_LANDING_2_Set)" },
 
-            // ==========================================
+           // ==========================================
             // BATTERIES & BREAKERS ⚡
             // ==========================================
-            "batt_master": { category: "Batteries", name: "Master Battery", icon: "🔋", type: "button", command: "TOGGLE_MASTER_BATTERY" },
+            "batt_master": { category: "Batteries", name: "Master Battery", icon: "🔋", type: "button", command: "TOGGLE_MASTER_BATTERY", stateKey: "batt_state" },
             "batt_1": { category: "Batteries", name: "Battery 1", icon: "🔋", type: "button", command: "BATTERY1_SET" },
             "batt_2": { category: "Batteries", name: "Battery 2", icon: "🔋", type: "button", command: "BATTERY2_SET" },
             "batt_3": { category: "Batteries", name: "Battery 3", icon: "🔋", type: "button", command: "BATTERY3_SET" },
@@ -544,27 +544,28 @@
             "breaker_flap": { category: "Breakers", name: "Flaps Breaker", icon: "🔌", type: "button", command: "BREAKER_FLAP_TOGGLE" },
             "breaker_inst": { category: "Breakers", name: "Inst Breaker", icon: "🔌", type: "button", command: "BREAKER_INST_TOGGLE" },
 
-            // ==========================================
+           // ==========================================
             // LIGHTS 💡
             // ==========================================
             "lights_all": { category: "Lights", name: "All Lights", icon: "💡", type: "button", command: "ALL_LIGHTS_TOGGLE" },
-            "lights_beacon": { category: "Lights", name: "Beacon", icon: "🚨", type: "button", command: "TOGGLE_BEACON_LIGHTS" },
+            "lights_beacon": { category: "Lights", name: "Beacon", icon: "🚨", type: "button", command: "TOGGLE_BEACON_LIGHTS", stateKey: "beacon_state" },
             "lights_cabin": { category: "Lights", name: "Cabin", icon: "💡", type: "button", command: "TOGGLE_CABIN_LIGHTS" },
-            "lights_landing": { category: "Lights", name: "Landing", icon: "🔦", type: "button", command: "LANDING_LIGHTS_TOGGLE" },
+            "lights_landing": { category: "Lights", name: "Landing", icon: "🔦", type: "button", command: "LANDING_LIGHTS_TOGGLE", stateKey: "landing_state" },
             "lights_logo": { category: "Lights", name: "Logo", icon: "✈️", type: "button", command: "TOGGLE_LOGO_LIGHTS" },
-            "lights_nav": { category: "Lights", name: "Nav", icon: "🟢", type: "button", command: "TOGGLE_NAV_LIGHTS" },
+            "lights_nav": { category: "Lights", name: "Nav", icon: "🟢", type: "button", command: "TOGGLE_NAV_LIGHTS", stateKey: "nav_light_state" },
             "lights_panel": { category: "Lights", name: "Panel", icon: "🎛️", type: "button", command: "PANEL_LIGHTS_TOGGLE" },
             "lights_recog": { category: "Lights", name: "Recognition", icon: "👀", type: "button", command: "TOGGLE_RECOGNITION_LIGHTS" },
-            "lights_strobe": { category: "Lights", name: "Strobe", icon: "✨", type: "button", command: "STROBES_TOGGLE" },
-            "lights_taxi": { category: "Lights", name: "Taxi", icon: "🚕", type: "button", command: "TOGGLE_TAXI_LIGHTS" },
+            "lights_strobe": { category: "Lights", name: "Strobe", icon: "✨", type: "button", command: "STROBES_TOGGLE", stateKey: "strobe_state" },
+            "lights_taxi": { category: "Lights", name: "Taxi", icon: "🚕", type: "button", command: "TOGGLE_TAXI_LIGHTS", stateKey: "taxi_state" },
 
             // ==========================================
             // ALTERNATORS, APU & MISC ELEC ⚡
             // ==========================================
             "elec_ext_power": { category: "Misc Electrical", name: "Ext Power", icon: "🔌", type: "button", command: "TOGGLE_EXTERNAL_POWER" },
+            "avionics_master": { category: "Misc Electrical", name: "Avionics Master", icon: "📻", type: "button", command: "TOGGLE_AVIONICS_MASTER", stateKey: "avionics_state" },
             "elec_bus_to_batt": { category: "Misc Electrical", name: "Bus to Batt", icon: "⚡", type: "button", command: "ELECTRICAL_BUS_TO_BATTERY_CONNECTION_TOGGLE" },
             "elec_bus_to_alt": { category: "Misc Electrical", name: "Bus to Alt", icon: "⚡", type: "button", command: "ELECTRICAL_BUS_TO_ALTERNATOR_CONNECTION_TOGGLE" },
-            "alt_master": { category: "Alternator", name: "Master Alt", icon: "⚡", type: "button", command: "TOGGLE_MASTER_ALTERNATOR" },
+            "alt_master": { category: "Alternator", name: "Master Alt", icon: "⚡", type: "button", command: "TOGGLE_MASTER_ALTERNATOR", stateKey: "alt_state" },
             "alt_1": { category: "Alternator", name: "Alternator 1", icon: "⚡", type: "button", command: "TOGGLE_ALTERNATOR1" },
             "alt_2": { category: "Alternator", name: "Alternator 2", icon: "⚡", type: "button", command: "TOGGLE_ALTERNATOR2" },
             "alt_3": { category: "Alternator", name: "Alternator 3", icon: "⚡", type: "button", command: "TOGGLE_ALTERNATOR3" },
@@ -696,11 +697,15 @@
             "g1000_mfd_fpl": { category: "G1000", name: "MFD FPL", icon: "🗺️", type: "button", command: "G1000_MFD_FLIGHTPLAN_BUTTON" },
 
             // ==========================================
-            // LANDING GEAR, BRAKES, HOISTS & POLES 🛞
+            // LANDING GEAR, FLAPS, BRAKES & HOISTS 🛞
             // ==========================================
-            "gear_toggle": { category: "Landing gear / brakes", name: "Landing Gear", icon: "⚙️", type: "button", command: "GEAR_TOGGLE" },
+            "gear_toggle": { category: "Landing gear / brakes", name: "Landing Gear", icon: "⚙️", type: "button", command: "GEAR_TOGGLE", stateKey: "gear_state" },
             "gear_emer": { category: "Landing gear / brakes", name: "Gear Emer Drop", icon: "⚠️", type: "button", command: "GEAR_EMERGENCY_HANDLE_TOGGLE" },
-            "brakes_parking": { category: "Landing gear / brakes", name: "Parking Brake", icon: "🛑", type: "button", command: "PARKING_BRAKES" },
+            "flaps_up": { category: "Landing gear / brakes", name: "Flaps Up", icon: "🔼", type: "button", command: "FLAPS_DECR" },
+            "flaps_down": { category: "Landing gear / brakes", name: "Flaps Down", icon: "🔽", type: "button", command: "FLAPS_INCR" },
+            "spoilers_arm_toggle": { category: "Spoilers", name: "Arm Spoilers", icon: "🛡️", type: "button", command: "SPOILERS_ARM_TOGGLE", stateKey: "spoilers_arm_state" },
+            "spoilers_toggle": { category: "Spoilers", name: "Toggle Spoilers", icon: "🌪️", type: "button", command: "SPOILERS_TOGGLE" },
+            "brakes_parking": { category: "Landing gear / brakes", name: "Parking Brake", icon: "🛑", type: "button", command: "PARKING_BRAKES", stateKey: "parking_brake_state" },
             "brakes_antiskid": { category: "Landing gear / brakes", name: "Anti-Skid", icon: "🛞", type: "button", command: "ANTISKID_BRAKES_TOGGLE" },
             "sling_pickup": { category: "Slings & Hoists", name: "Pickup/Release", icon: "🏗️", type: "button", command: "SLING_PICKUP_RELEASE" },
             "hoist_deploy": { category: "Slings & Hoists", name: "Hoist Deploy", icon: "🏗️", type: "button", command: "HOIST_DEPLOY_TOGGLE" },
@@ -732,13 +737,16 @@
             "fuel_xfer_auto": { category: "Fuel Transfer Keys", name: "Xfer Auto", icon: "🔄", type: "button", command: "SET_FUEL_TRANSFER_AUTO" },
             "fuel_dump_tgl": { category: "Miscellaneous Fuel", name: "Fuel Dump", icon: "🚰", type: "button", command: "FUEL_DUMP_TOGGLE" },
             "fuel_valve_tgl": { category: "Fuel System", name: "Fuel Valve", icon: "🚰", type: "button", command: "FUELSYSTEM_VALVE_TOGGLE" },
-            "fuel_pump_tgl": { category: "Fuel System", name: "Fuel Pump", icon: "⛽", type: "button", command: "FUELSYSTEM_PUMP_TOGGLE" },
+            "fuel_pump_1": { category: "Fuel System", name: "Fuel Pump 1", icon: "⛽", type: "button", command: "TOGGLE_ELECT_FUEL_PUMP1", stateKey: "eng1_pump_state" },
+            "fuel_pump_2": { category: "Fuel System", name: "Fuel Pump 2", icon: "⛽", type: "button", command: "TOGGLE_ELECT_FUEL_PUMP2" },
+            "fuel_pump_3": { category: "Fuel System", name: "Fuel Pump 3", icon: "⛽", type: "button", command: "TOGGLE_ELECT_FUEL_PUMP3" },
+            "fuel_pump_4": { category: "Fuel System", name: "Fuel Pump 4", icon: "⛽", type: "button", command: "TOGGLE_ELECT_FUEL_PUMP4" },
             "fuel_sel_l": { category: "Fuel Selector", name: "Sel Left", icon: "◀️", type: "button", command: "FUEL_SELECTOR_LEFT" },
             "fuel_sel_r": { category: "Fuel Selector", name: "Sel Right", icon: "▶️", type: "button", command: "FUEL_SELECTOR_RIGHT" },
             "fuel_sel_both": { category: "Fuel Selector", name: "Sel Both", icon: "⏫", type: "button", command: "FUEL_SELECTOR_ALL" },
             "fuel_sel_off": { category: "Fuel Selector", name: "Sel Off", icon: "🛑", type: "button", command: "FUEL_SELECTOR_OFF" },
             "fuel_crossfeed": { category: "Cross Feed", name: "Crossfeed", icon: "🔀", type: "button", command: "CROSS_FEED_TOGGLE" },
-
+            
             // ==========================================
             // RADIOS & GPS 📻🛰️
             // ==========================================
@@ -764,17 +772,18 @@
             "ice_anti_tgl": { category: "Anti Ice", name: "Anti-Ice All", icon: "❄️", type: "button", command: "ANTI_ICE_TOGGLE" },
             "ice_anti1_tgl": { category: "Anti Ice", name: "Anti-Ice 1", icon: "❄️", type: "button", command: "ANTI_ICE_TOGGLE_ENG1" },
             "ice_anti2_tgl": { category: "Anti Ice", name: "Anti-Ice 2", icon: "❄️", type: "button", command: "ANTI_ICE_TOGGLE_ENG2" },
-            "ice_pitot": { category: "Anti Ice", name: "Pitot Heat", icon: "🔥", type: "button", command: "PITOT_HEAT_TOGGLE" },
+            "ice_pitot": { category: "Anti Ice", name: "Pitot Heat", icon: "🔥", type: "button", command: "PITOT_HEAT_TOGGLE", stateKey: "pitot_state" },
             "ice_struct": { category: "Anti Ice", name: "Struct De-Ice", icon: "❄️", type: "button", command: "TOGGLE_STRUCTURAL_DEICE" },
             "ice_prop": { category: "Anti Ice", name: "Prop De-Ice", icon: "❄️", type: "button", command: "TOGGLE_PROPELLER_DEICE" },
+            "carb_heat": { category: "Anti Ice", name: "Carb Heat", icon: "♨️", type: "button", command: "ANTI_ICE_TOGGLE_ENG1", stateKey: "carb_heat_state" },
 
             // ==========================================
             // CONDITION, STARTERS, MAGS & COWL 🎚️🔑⚡💨
             // ==========================================
             "cond_inc_all": { category: "Condition Lever", name: "Cond All +", icon: "🎚️", type: "button", command: "CONDITION_LEVER_INC" },
             "cond_dec_all": { category: "Condition Lever", name: "Cond All -", icon: "🎚️", type: "button", command: "CONDITION_LEVER_DEC" },
-            "eng_starter_1": { category: "Starter", name: "Starter 1", icon: "🔑", type: "button", command: "TOGGLE_STARTER1" },
-            "eng_starter_2": { category: "Starter", name: "Starter 2", icon: "🔑", type: "button", command: "TOGGLE_STARTER2" },
+            "eng_starter_1": { category: "Starter", name: "Starter 1", icon: "🔑", type: "button", command: "TOGGLE_STARTER1", stateKey: "eng1_starter_state" },
+            "eng_starter_2": { category: "Starter", name: "Starter 2", icon: "🔑", type: "button", command: "TOGGLE_STARTER2", stateKey: "eng2_starter_state" },
             "eng_starter_3": { category: "Starter", name: "Starter 3", icon: "🔑", type: "button", command: "TOGGLE_STARTER3" },
             "eng_starter_4": { category: "Starter", name: "Starter 4", icon: "🔑", type: "button", command: "TOGGLE_STARTER4" },
             "mag_both": { category: "Magneto", name: "Mag BOTH", icon: "⚡", type: "button", command: "MAGNETO_BOTH" },
@@ -813,7 +822,11 @@
             "rotary_com1_fract": { category: "COM", name: "COM1 Fract", icon: "📻", type: "rotary", dataKey: "com1_stby", unit: "", decimals: 3, cmdDec: "COM_RADIO_FRACT_DEC", cmdInc: "COM_RADIO_FRACT_INC" },
             "rotary_nav1_whole": { category: "NAV", name: "NAV1 Whole", icon: "📡", type: "rotary", dataKey: "nav1_stby", unit: "", decimals: 2, cmdDec: "NAV1_RADIO_WHOLE_DEC", cmdInc: "NAV1_RADIO_WHOLE_INC" },
             "rotary_nav1_fract": { category: "NAV", name: "NAV1 Fract", icon: "📡", type: "rotary", dataKey: "nav1_stby", unit: "", decimals: 2, cmdDec: "NAV1_RADIO_FRACT_DEC", cmdInc: "NAV1_RADIO_FRACT_INC" },
-        
+            "rotary_com2_whole": { category: "COM", name: "COM2 Whole", icon: "📻", type: "rotary", dataKey: "com2_stby", unit: "", decimals: 3, cmdDec: "COM2_RADIO_WHOLE_DEC", cmdInc: "COM2_RADIO_WHOLE_INC" },
+            "rotary_com2_fract": { category: "COM", name: "COM2 Fract", icon: "📻", type: "rotary", dataKey: "com2_stby", unit: "", decimals: 3, cmdDec: "COM2_RADIO_FRACT_DEC", cmdInc: "COM2_RADIO_FRACT_INC" },
+            "rotary_nav2_whole": { category: "NAV", name: "NAV2 Whole", icon: "📡", type: "rotary", dataKey: "nav2_stby", unit: "", decimals: 2, cmdDec: "NAV2_RADIO_WHOLE_DEC", cmdInc: "NAV2_RADIO_WHOLE_INC" },
+            "rotary_nav2_fract": { category: "NAV", name: "NAV2 Fract", icon: "📡", type: "rotary", dataKey: "nav2_stby", unit: "", decimals: 2, cmdDec: "NAV2_RADIO_FRACT_DEC", cmdInc: "NAV2_RADIO_FRACT_INC" },
+
             // ==========================================
             // RADIO TELEMETRY GAUGES 📻
             // ==========================================

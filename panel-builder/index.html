@@ -664,26 +664,27 @@
             // ==========================================
             // AUTOPILOT & FLIGHT ASSIST 🤖
             // ==========================================
-            "ap_spd_hold": { category: "Autopilot", name: "AP SPD Hold", icon: "💨", type: "button", command: "AP_AIRSPEED_HOLD" },
-            "ap_alt_hold": { category: "Autopilot", name: "AP ALT Hold", icon: "↕️", type: "button", command: "AP_ALT_HOLD" },
+            "ap_master": { category: "Autopilot", name: "AP Master", icon: "✈️", type: "button", command: "AP_MASTER", stateKey: "ap_master_state" },
+            "ap_spd_hold": { category: "Autopilot", name: "AP SPD Hold", icon: "💨", type: "button", command: "AP_AIRSPEED_HOLD", stateKey: "ap_spd_state" },
+            "ap_alt_hold": { category: "Autopilot", name: "AP ALT Hold", icon: "↕️", type: "button", command: "AP_ALT_HOLD", stateKey: "ap_alt_state" },
             "ap_rad_alt_toggle": { category: "Autopilot", name: "Radio Alt Mode", icon: "📡", type: "button", command: "AP_ALT_RADIO_MODE_TOGGLE" },
-            "ap_apr_hold": { category: "Autopilot", name: "AP Approach", icon: "🛬", type: "button", command: "AP_APR_HOLD" },
+            "ap_apr_hold": { category: "Autopilot", name: "AP Approach", icon: "🛬", type: "button", command: "AP_APR_HOLD", stateKey: "ap_apr_state" },
             "ap_att_hold": { category: "Autopilot", name: "AP Attitude", icon: "⚖️", type: "button", command: "AP_ATT_HOLD" },
             "ap_bank_hold": { category: "Autopilot", name: "AP Bank Hold", icon: "🔄", type: "button", command: "AP_BANK_HOLD" },
             "ap_bc_hold": { category: "Autopilot", name: "AP Backcourse", icon: "↩️", type: "button", command: "AP_BC_HOLD" },
-            "ap_flc": { category: "Autopilot", name: "AP FLC", icon: "📈", type: "button", command: "AP_FLIGHT_LEVEL_CHANGE" },
-            "ap_hdg_hold": { category: "Autopilot", name: "AP HDG Hold", icon: "🧭", type: "button", command: "AP_HDG_HOLD" },
+            "ap_flc": { category: "Autopilot", name: "AP FLC", icon: "📈", type: "button", command: "AP_FLIGHT_LEVEL_CHANGE", stateKey: "ap_flc_state" },
+            "ap_hdg_hold": { category: "Autopilot", name: "AP HDG Hold", icon: "🧭", type: "button", command: "AP_HDG_HOLD", stateKey: "ap_hdg_state" },
             "ap_loc_hold": { category: "Autopilot", name: "AP Localizer", icon: "📡", type: "button", command: "AP_LOC_HOLD" },
             "ap_mach_hold": { category: "Autopilot", name: "AP Mach Hold", icon: "⚡", type: "button", command: "AP_MACH_HOLD" },
-            "ap_nav_hold": { category: "Autopilot", name: "AP NAV Hold", icon: "🗺️", type: "button", command: "AP_NAV1_HOLD" },
-            "ap_vs_hold": { category: "Autopilot", name: "AP VS Hold", icon: "↕️", type: "button", command: "AP_PANEL_VS_HOLD" },
+            "ap_nav_hold": { category: "Autopilot", name: "AP NAV Hold", icon: "🗺️", type: "button", command: "AP_NAV1_HOLD", stateKey: "ap_nav_state" },
+            "ap_vs_hold": { category: "Autopilot", name: "AP VS Hold", icon: "↕️", type: "button", command: "AP_PANEL_VS_HOLD", stateKey: "ap_vs_state" },
             "ap_vnav": { category: "Autopilot", name: "AP VNAV", icon: "📉", type: "button", command: "AP_VNAV_TOGGLE" },
-            "athr_arm": { category: "Flight Assistance", name: "A/T Arm", icon: "🚀", type: "button", command: "AUTO_THROTTLE_ARM" },
+            "athr_arm": { category: "Flight Assistance", name: "A/T Arm", icon: "🚀", type: "button", command: "AUTO_THROTTLE_ARM", stateKey: "ap_athr_state" },
             "athr_disc": { category: "Flight Assistance", name: "A/T Disc.", icon: "⚠️", type: "button", command: "AUTO_THROTTLE_DISCONNECT" },
             "athr_toga": { category: "Flight Assistance", name: "A/T TO/GA", icon: "🛫", type: "button", command: "AUTO_THROTTLE_TO_GA" },
-            "fd_toggle": { category: "Flight Assistance", name: "Flight Dir", icon: "📐", type: "button", command: "TOGGLE_FLIGHT_DIRECTOR" },
-            "yd_toggle": { category: "Flight Assistance", name: "Yaw Damper", icon: "⚓", type: "button", command: "YAW_DAMPER_TOGGLE" },
-
+            "fd_toggle": { category: "Flight Assistance", name: "Flight Dir", icon: "📐", type: "button", command: "TOGGLE_FLIGHT_DIRECTOR", stateKey: "fd_state" },
+            "yd_toggle": { category: "Flight Assistance", name: "Yaw Damper", icon: "⚓", type: "button", command: "YAW_DAMPER_TOGGLE", stateKey: "ap_yd_state" },
+           
             // ==========================================
             // G1000 🖥️
             // ==========================================
@@ -746,7 +747,7 @@
             "fuel_sel_both": { category: "Fuel Selector", name: "Sel Both", icon: "⏫", type: "button", command: "FUEL_SELECTOR_ALL" },
             "fuel_sel_off": { category: "Fuel Selector", name: "Sel Off", icon: "🛑", type: "button", command: "FUEL_SELECTOR_OFF" },
             "fuel_crossfeed": { category: "Cross Feed", name: "Crossfeed", icon: "🔀", type: "button", command: "CROSS_FEED_TOGGLE" },
-            
+
             // ==========================================
             // RADIOS & GPS 📻🛰️
             // ==========================================

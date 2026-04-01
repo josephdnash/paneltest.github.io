@@ -15,6 +15,17 @@ import AdminDashboard from './components/AdminDashboard';
 
 import useMSFS from './hooks/useMSFS';
 
+// --- MOBILE DRAG & DROP POLYFILL ---
+import { polyfill } from "mobile-drag-drop";
+import "mobile-drag-drop/default.css"; 
+
+polyfill({
+    holdToDrag: 250 
+});
+
+window.addEventListener('touchmove', function() {}, {passive: false});
+// -----------------------------------
+
 function App() {
     // --- AUTH STATES ---
     const [user, setUser] = useState(null);

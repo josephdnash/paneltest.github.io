@@ -341,6 +341,7 @@ export const DICTIONARY = {
             "gauge_flaps": { category: "Telemetry", name: "Flaps %", icon: "📐", type: "gauge", dataKey: "flaps_pct", unit: "%" },
             "gauge_fuel": { category: "Telemetry", name: "Fuel Qty", icon: "⛽", type: "gauge", dataKey: "fuel_pct", unit: " Gal" },
             "gauge_oat": { category: "Telemetry", name: "Outside Temp", icon: "🌡️", type: "gauge", dataKey: "oat", unit: "°C" },
+	    "gauge_hdg": { category: "Telemetry", name: "Heading", icon: "🧭", type: "gauge", dataKey: "heading", unit: "°" },
             "gauge_com1_act": { category: "Radios", name: "COM 1 ACT", icon: "🔊", type: "gauge", dataKey: "com1_act", unit: "", decimals: 3 },
             "gauge_com1_stby": { category: "Radios", name: "COM 1 STBY", icon: "🔈", type: "gauge", dataKey: "com1_stby", unit: "", decimals: 3 },
             "gauge_nav1_act": { category: "Radios", name: "NAV 1 ACT", icon: "📍", type: "gauge", dataKey: "nav1_act", unit: "", decimals: 2 },
